@@ -166,62 +166,9 @@ PACK(
 
 });
 
-/*!
-* NAV-SOL Message Structure
-* This message combines Position, velocity and
-* time solution in ECEF, including accuracy figures.
-* ID: 0x01  0x06  Payload Length=52 bytes
-*/
-
-#define NAVSOL_FLAG_GPSFIX_VALID 0b0001
-#define NAVSOL_FLAG_DGPS_USED_FOR_FIX 0b0010
-#define NAVSOL_FLAG_WEEK_NUM_VALID 0b0100
-#define NAVSOL_FLAG_TOW_VALID 0b1000
-
-PACK(
-    struct NavSol{
-        UbloxHeader header;
-        uint32_t iTOW;
-        int32_t fTOW;
-        int16_t week;
-        uint8_t gpsFix;
-        int8_t flags;
-        int32_t ecefX;
-        int32_t ecefY;
-        int32_t ecefZ;
-        uint32_t pAcc;
-        int32_t ecefVX;
-        int32_t ecefVY;
-        int32_t ecefVZ;
-        uint32_t sAcc;
-        uint16_t pDop;
-        uint8_t reserved1;
-        uint8_t numSV;
-        uint32_t reserved2;
-        uint8_t checksum[2];
-});
 
 
-/*!
-* NAV-POSLLH Message Structure
-* This message outputs the Geodetic position in
-* the currently selected Ellipsoid. The default is
-* the WGS84 Ellipsoid, but can be changed with the
-* message CFG-DAT.
-* ID: 0x01  0x02  Payload Length=28 bytes
-*/
-PACK(
-    struct NavPosLLH{
-        UbloxHeader header;		//!< Ublox header
-        uint32_t iTOW;			//!< GPS millisecond time of week
-        int32_t longitude_scaled; //!< longitude in degrees. Scaling 1e-7
-        int32_t latitude_scaled; //!< latitude in degrees. Scaling 1e-7
-        int32_t height;			 //!< height above ellipsoid [mm]
-        int32_t height_mean_sea_level; //!< height above mean sea level [mm]
-        uint32_t horizontal_accuracy; //!< horizontal accuracy estimate [mm]
-        uint32_t vertical_accuracy;	//!< vertical accuracy estimate [mm]
-        uint8_t checksum[2];
-});
+
 
 /*!
 * NAV-VELNED Message Structure
@@ -244,43 +191,6 @@ PACK(
         uint8_t checksum[2];
 });
 
-/*!
-* NAV-SVINFO Message Structure
-* This message outputs info about SVs each 
-* channel is tracking
-* ID: 0x01  0x30  Payload Length= (8+12*NumChannels bytes)
-*/
-PACK(
-    struct SVInfoReapBlock{
-        uint8_t ch_num;     //!< Channel Number (255 if SV isn't assigned to channel)
-        uint8_t svid;       // Satellite ID number
-        uint8_t flags;      // bitfield (description of contents follows)
-        uint8_t quality;    // signal quality indicator bitfield
-        uint8_t cno;        // carrier to noise ratio (dbHz)
-        int8_t elev;        // elevation (deg)
-        int16_t azim;       // azimuth (deg)
-        int32_t prRes;      // Psuedorange residual (centimeters)
-});
-
-PACK(
-    struct NavSVInfo{
-        UbloxHeader header;		//!< Ublox header
-        uint32_t iTOW;  // GPS time of week (ms)
-        uint8_t numch;  //! number of channels following
-        uint8_t global_flags;   // Chip and Hardware Generation
-        uint16_t reserved2;
-        SVInfoReapBlock svinfo_reap[MAXCHAN]; // NOTE: TODO: True max needs to be confirmed
-        uint8_t checksum[2];
-});
-// Description of flags bitfield
-#define NAV_SVINFO_FLAGS_USED4NAV 0B00000001 // SV used in NAV sol
-#define NAV_SVINFO_FLAGS_DGPS_AVAIL 0B00000010 // DGPS corr data available for SV
-#define NAV_SVINFO_FLAGS_ORBIT_INFO_AVAIL 0B00000100 // Ephemeris of Almanac orbit info available for SV
-#define NAV_SVINFO_FLAGS_EPHEMS_AVAIL 0B00001000 // Ephemeris orbit info available for SV
-#define NAV_SVINFO_FLAGS_SV_UNHEALTHY 0B00010000 // SV unhealthy and not used
-#define NAV_SVINFO_FLAGS_ALMPLUS_AVAIL 0B00100000 // Almanac Plus orbit info used
-#define NAV_SVINFO_FLAGS_ASSNOW_AUTO 0B01000000 // AssistNow Autonomous orbit info used
-#define NAV_SVINFO_FLAGS_PR_SMOOTHED 0B10000000 // Carrier Smoothed pseudorange used (PPP)
 
 
 /*!
@@ -321,72 +231,11 @@ PACK(
         uint8_t checksum[2];
 });
 
-/*!
-* NAV-DOP Message Structure
-* This message outputs various DOPs. All 
-* DOP values are scaled by a factor of 100.
-* Ex. If gdop contains a value 156, the true
-* value is 1.56
-* ID: 0x01  0x04  Payload Length= 18 bytes
-*/
-PACK(
-    struct NavDOP{
-        UbloxHeader header;
-        uint32_t iTOW;  // GPS ms time of week (ms)
-        uint16_t gdop;  // Geometric DOP
-        uint16_t pdop;  // Position DOP
-        uint16_t tdop;  // Time DOP
-        uint16_t vdop;  // Vertical DOP
-        uint16_t hdop;  // Horizontal DOP
-        uint16_t ndop;  // Northing DOP
-        uint16_t edop;  // Easting DOP
-        uint8_t checksum[2];
-});
 
-/*!
-* NAV-DGPS Message Structure
-* This message outputs DGPS correction data as it
-* has been applied to the current NAV Solution
-* ID: 0x01  0x31  Payload Length= (16 + 12*numChannels bytes)
-*/
-PACK(
-    struct NavDGPSReap{
-        uint8_t svid;
-        uint8_t flags;  // bitfield containing channel each sv is on and DGPS status
-        uint16_t agecorr;   // age of latest correction data (ms)
-        float prcorr;   // psuedorange correction   (m)
-        float prrcorr;  // psuedorange rate correction (m/sec)
-});
 
-PACK(
-    struct NavDGPS{
-        UbloxHeader header;
-        uint32_t iTOW;  // GPS ms time of week
-        int32_t age;    // age of newest correction data (ms)
-        int16_t baseID; // DGPS base station ID
-        int16_t basehealth; // DGPS base station health
-        uint8_t numchan;    // nomber of channels for which correction data is following
-        uint8_t status; // DGPS correction type status
-        uint16_t reserved;  // reserved
-        NavDGPSReap nav_dgps_reap;  // repeated portion of NAV-DGPS message
-        uint8_t checksum[2];
-});
 
-/*!
-* NAV-CLOCK Message Structure
-* This message outputs receiver clock information
-* ID: 0x01  0x22  Payload Length= 20 bytes
-*/
-PACK(
-    struct NavClock{
-        UbloxHeader header;
-        uint32_t iTOW;
-        int32_t clkbias;    // clock bias in nanoseconds
-        int32_t clkdrift;   // clock drift in ns/s
-        uint32_t tacc;      // time accuracy estimate (ns)
-        uint32_t facc;      // frequency accuracy estimate (ps/s)
-        uint8_t checksum[2];
-});
+
+
 
 
 // Parsed Ephemeris Parameters for a SV - NOT FINISHED
@@ -539,50 +388,6 @@ PACK(
 
 //! UBX-ACK
  
-///////////////////////////////////////////////////////////
-// Configuration Messages
-///////////////////////////////////////////////////////////
-
-
-
-
-
-/*!
- * CFG-RST Message Structure
- * This message allows a receiver to be reset.
- * ID: 0x06  0x04 Payload Length=4 bytes
- */
- PACK(
-    struct CfgRst {
-        UbloxHeader header;     //!< Ublox header
-        uint16_t nav_bbr_mask;  //!< Nav data to clear: 0x0000 = hot start, 0x0001 = warm start, 0xFFFF=cold start
-        uint8_t  reset_mode;     //!< Reset mode
-        uint8_t  reserved;       //!< reserved
-        uint8_t checksum[2];
-});
-
-
-/*!
- * CFM-PRT Message Structure
- * This message configures a USART or USB port.
- * Use to specify input/output protocols to use
- * ID: 0x06  0x00 Payload Length=20 bytes
- */
-PACK(
-    struct CfgPrt {
-        UbloxHeader header;     //!< Ublox header
-        uint8_t port_id; //!< port identifier (0 or 1 for USART or 3 for USB)
-        uint8_t reserved; //!< reserved
-        uint16_t tx_ready; //!< transmit ready status
-        uint32_t reserved2; //!< reserved
-        uint32_t reserved3; //!< reserved
-        uint16_t input_mask; //!< input protocol mask
-        uint16_t output_mask; //!< output protocol mask
-        uint16_t reserved4; //!< reserved
-        uint16_t reserved5; //!< reserved
-        uint8_t checksum[2];
-});
-
 
 
 ///////////////////////////////////////////////////////////
@@ -760,7 +565,7 @@ PACK(
  * ID: 0x06  0x01 Payload Length=3 bytes
  */
 PACK(
-    struct CfgMsgRate {
+    struct CfgMsg {
         UbloxHeader header;     //!< Ublox header
         uint8_t message_class;  //!< class of message to request
         uint8_t message_id;     //!< id of message to request
@@ -769,7 +574,7 @@ PACK(
 });
 
 PACK(
-    struct CfgMsgRates {
+    struct CfgMsgs {
         UbloxHeader header;     //!< Ublox header
         uint8_t message_class;  //!< class of message to request
         uint8_t message_id;     //!< id of message to request
@@ -915,6 +720,27 @@ PACK(
 
 
 /*!
+ * CFG-PRT Message Structure
+ * This message configures a USART or USB port.
+ * Use to specify input/output protocols to use
+ * ID: 0x06  0x00 Payload Length=20 bytes
+ */
+PACK(
+    struct CfgPrt {
+        UbloxHeader header;     //!< Ublox header
+        uint8_t port_id; //!< port identifier (0 or 1 for USART or 3 for USB)
+        uint8_t reserved; //!< reserved
+        uint16_t tx_ready; //!< transmit ready status
+        uint32_t reserved2; //!< reserved
+        uint32_t reserved3; //!< reserved
+        uint16_t input_mask; //!< input protocol mask
+        uint16_t output_mask; //!< output protocol mask
+        uint16_t reserved4; //!< reserved
+        uint16_t reserved5; //!< reserved
+        uint8_t checksum[2];
+});
+
+/*!
 * CFG-PRT Message Structure
 * Polls the configuration of the used I/O Port
 * ID: 0x06  0x00 Payload Length=0 bytes
@@ -961,23 +787,94 @@ PACK(
 // TODO
 
 
+/*!
+* CFG-PWR Message Structure
+* Put receiver in a defined power state
+* ID: 0x06  0x57 Payload Length=8 bytes
+*/
 PACK(
-    struct PutReceiverDefPwrState{
+    struct CfgPwr{
         UbloxHeader header;
         uint8_t version;        // Message version (1 for this version)
-        uint8_t reserved1;        // Reserved
+        uint8_t reserved1[3];        // Reserved
         uint32_t state;        // Enter system state. 0x52554E20: GNSS running. 0x53544F50: GNSS stopped. 0x42434B50: Software Backup
         uint8_t checksum[2];    
 });
 
+
+/*!
+* CFG-RATE Message Structure
+* Navigation/Measurement Rate Settings
+* NOT SUPPORTED ON FTS PRODUCT VARIANT
+* ID: 0x06  0x08 Payload Length=8 bytes
+*/
 PACK(
-    struct SyncMgrConfig{
+    struct CfgRate
+    {
+        UbloxHeader header;     
+        uint16_t measRate;      //< GPS measurement rate (ms)
+        uint16_t navRate;       //< Navigation rate (ALWAYS = 1) (cycles)
+        uint16_t timeRef;       //< Alignment to reference time (0=UTC Time, 1=GPS Time)
+        uint8_t checksum[2];  
+});
+
+
+/*!
+* CFG-RINV Message Structure
+* Contents of Remote Inventory
+* ID: 0x06  0x34 Payload Length=1+1*N bytes
+*/
+PACK(
+    struct CfgRinv
+    {
+        UbloxHeader header;
+        uint8_t flags;
+        uint8_t data[30];
+        uint8_t checksum[2];
+});
+
+
+/*!
+ * CFG-RST Message Structure
+ * This message allows a receiver to be reset.
+ * ID: 0x06  0x04 Payload Length=4 bytes
+ */
+ PACK(
+    struct CfgRst {
+        UbloxHeader header;     //!< Ublox header
+        uint16_t nav_bbr_mask;  //!< Nav data to clear: 0x0000 = hot start, 0x0001 = warm start, 0xFFFF=cold start
+        uint8_t  reset_mode;     //!< Reset mode
+        uint8_t  reserved;       //!< reserved
+        uint8_t checksum[2];
+});
+
+/*!
+ * CFG-RXM Message Structure
+ * RXM configuration
+ * ID: 0x06  0x11 Payload Length=2 bytes
+ */
+
+
+/*!
+ * CFG-SBAS Message Structure
+ * SBAS Configuration
+ * ID: 0x06  0x16 Payload Length=8 bytes
+ */
+
+
+/*!
+ * CFG-SMGR Message Structure
+ * Synchronization manager configuration
+ * ID: 0x06  0x62 Payload Length=20 bytes
+ */
+PACK(
+    struct CfgSmgr{
         UbloxHeader header;
         uint8_t version;        // Message version (0 for this version)
         uint8_t minGNSSFix;        // Minimum number of GNSS fixes before we commit to use it as a source
         uint16_t maxFreqChangeRate;        // Maximum frequency change rate during disciplining. Must not exceed 30ppb/s
         uint16_t maxPhaseCorrRate;        // Maximum phase correction rate in coherent time pulse mode. For maximum phase correction rate in corrective time pulse mode see maxSlewRate. Note that in coherent time pulse mode phase correction is achieved by intentional frequency offset. Allowing for a high phase correction rate can result in large intentional frequency offset. Must not exceed 100ns/s
-        uint8_t reserved1;        // Reserved
+        uint8_t reserved1[2];        // Reserved
         uint16_t freqTolerance;        // Limit of possible deviation from nominal before TIM-TOS indicates that frequency is out of tolerance
         uint16_t timeTolerance;        // Limit of possible deviation from nominal before TIM-TOS indicates that time pulse is out of tolerance
         uint16_t messageCfg;        // Sync manager message configuration (see graphic below)
@@ -987,12 +884,38 @@ PACK(
 });
 
 
+/*!
+ * CFG-TMODE2 Message Structure
+ * Time Mode Settings 2
+ * Only available with Timing or FTS product variants
+ * ID: 0x06  0x3D Payload Length=28 bytes
+ */
+
+
+/*!
+ * CFG-TP5 Polling Message Structure
+ * Poll Time Pulse Parameters
+ * ID: 0x06  0x31 Payload Length=1 bytes
+ */
 PACK(
-    struct TimePulseParam{
+    struct CfgTp5Poll{
+        UbloxHeader header;
+        uint8_t tpIdx;        // Time pulse selection (0 = TIMEPULSE, 1 = TIMEPULSE2)
+        uint32_t checksum[2];    
+});
+
+
+/*!
+ * CFG-TP5 Message Structure
+ * Time Pulse Parameters
+ * ID: 0x06  0x31 Payload Length=28 bytes
+ */
+PACK(
+    struct CfgTp5{
         UbloxHeader header;
         uint8_t tpIdx;        // Time pulse selection (0 = TIMEPULSE, 1 = TIMEPULSE2)
         uint8_t version;        // Version, 0 for this message
-        uint8_t reserved1;        // Reserved
+        uint8_t reserved1[2];        // Reserved
         int16_t antCableDelay;        // Antenna cable delay
         int16_t rfGroupDelay;        // RF group delay
         uint32_t freqPeriod;        // Frequency or period time, depending on setting of bit 'isFreq'
@@ -1000,23 +923,51 @@ PACK(
         uint32_t pulseLenRatio;        // Pulse length or duty cycle, depending on 'isLength'
         uint32_t pulseLenRatioLock;        // Pulse length or duty cycle when locked to GPS time, only used if 'lockedOtherSet' is set
         int32_t userConfigDelay;        // User configurable time pulse delay
-        uint32_t fags;        // Configuration flags (see graphic in spec sheet)
+        uint32_t flags;        // Configuration flags (see graphic in spec sheet)
         uint32_t checksum[2];    
 });
 
 
+/*!
+ * CFG-TXSLOT Polling Message Structure
+ * TX buffer time slots configuration
+ * only available with FTS product variant
+ * ID: 0x06  0x53 Payload Length=16 bytes
+ */
 PACK(
-    struct TXBufferTimeSlotsConfig{
+    struct CfgTxslot{
         UbloxHeader header;
         uint8_t version;        // Message version (0 for this version)
         uint8_t enable;        // Bitfield of ports for which the slots are enabled. (see graphic below)
         uint8_t refTp;        // Reference timepulse source. 0 - Timepulse. 1 - Timepulse 2
         uint8_t reserved1;        // Reserved
-        uint32_t end;        // End of timeslot in milliseconds after time pulse
+        uint32_t end[3];        // End of timeslot in milliseconds after time pulse
         uint8_t checksum[2];    
 });
 
 
+/*!
+ * CFG-USB Message Structure
+ * USB Configuration
+ * ID: 0x06  0x1B Payload Length=108 bytes
+ */
+
+
+///////////////////////////////////////////////////////////
+// UBX-INF
+///////////////////////////////////////////////////////////
+
+
+
+///////////////////////////////////////////////////////////
+// UBX-LOG
+///////////////////////////////////////////////////////////
+
+/*!
+ * LOG-CREATE Message Structure
+ * Create Log File
+ * ID: 0x21  0x07 Payload Length=8 bytes
+ */
 PACK(
     struct LogCreate{
         UbloxHeader header;
@@ -1032,12 +983,31 @@ PACK(
 });
 
 
+/*!
+ * LOG-ERASE Message Structure
+ * Erase Logged Data
+ * Message Type: COMMAND
+ * ID: 0x21  0x03 Payload Length=0 bytes
+ */
 PACK(
-    struct LogFindTimeIndex{
+    struct LogCreate{
+        UbloxHeader header;
+        uint8_t checksum[2];    
+});
+
+
+/*!
+ * LOG-FINDTIME Request Message Structure
+ * Find index of the first log entry <= given time
+ * Message Type: INPUT
+ * ID: 0x21  0x0E Payload Length=12 bytes
+ */
+PACK(
+    struct LogFindTimeRequest{
         UbloxHeader header;
         uint8_t version;        // Message version (=0 for this version)
         uint8_t type;        // Message type, 0 for request
-        uint8_t reserved1;        // Reserved
+        uint8_t reserved1[2];        // Reserved
         uint8_t year;        // Year (1-65635) of UTC time
         uint8_t month;        // Month (1-12) of UTC time
         uint8_t day;        // Day (1-31) of UTC time
@@ -1048,25 +1018,36 @@ PACK(
         uint8_t checksum[2];    
 });
 
-
+/*!
+ * LOG-FINDTIME Response Message Structure
+ * Find index of the first log entry <= given time
+ * Message Type: OUTPUT
+ * ID: 0x21  0x0E Payload Length=8 bytes
+ */
 PACK(
     struct LogFindTimeReqResponse{
         UbloxHeader header;
         uint8_t version;        // Message version (=1 for this version)
         uint8_t type;        // Message type, t for response
-        uint8_t reserved1;        // Reserved
+        uint8_t reserved1[2];        // Reserved
         uint32_t entryNumber;        // Index of the most recent entry with time <= specified
         uint8_t checksum[2];    
 });
 
 
+/*!
+ * LOG-INFO Message Structure
+ * Log information
+ * Message Type: OUTPUT
+ * ID: 0x21  0x08 Payload Length=48 bytes
+ */
 PACK(
     struct LogInfo{
         UbloxHeader header;
         uint8_t version;        // The version of this message. Set to 1
-        uint8_t reserved1;        // Reserved
+        uint8_t reserved1[3];        // Reserved
         uint32_t filestoreCapacity;        // The capacity of the filestore
-        uint8_t reserved2;        // Reserved
+        uint8_t reserved2[8];        // Reserved
         uint32_t currentMaxLogSize;        // The maximum size the current log is allowed to grow to
         uint32_t currentLogSize;        // Approximate amount of space in log currently occupied
         uint32_t entryCount;        // Number of entries in the log. Note: for circular logs this value will decrease when a group of entries is deleted to make space for new ones.
@@ -1085,48 +1066,19 @@ PACK(
         uint8_t newestSecond;      // Newest second (0-60)
         uint8_t reserved4;     // Reserved
         uint8_t status;        // Log status flags (see graphic below)
-        uint8_t reserved5;     // Reserved
+        uint8_t reserved5[3];     // Reserved
         uint8_t checksum[2];    
 });
 
 
-
+/*!
+ * LOG-RETRIEVEPOSEXTRA Message Structure
+ * Odometer log entry
+ * Message Type: OUTPUT
+ * ID: 0x21  0x0F Payload Length=32 bytes
+ */
 PACK(
-    struct ReqLogData{
-        UbloxHeader header;
-        uint32_t startNumber;      // Index of first entry to be transferred
-        uint32_t entryCount;       // Number of log entries to transfer. The maximum is 256
-        uint8_t version;       // The version of this message. Set to 0
-        uint8_t reserved1;     // Reserved
-        uint8_t checksum[2];    
-});
-
-PACK(
-    struct PosFixLogEntry{
-        UbloxHeader header;
-        uint32_t entryIndex;       // The index of this log entry
-        int32_t lon;       // Longitude
-        int32_t lat;       // Latitude
-        int32_t hMSL;      // Height above mean sea level
-        uint32_t hAcc;     // Horizontal accuracy estimate
-        uint32_t gSpeed;       // Ground speed (2-D)
-        uint32_t heading;      // Heading
-        uint8_t version;       // The version of this message. Set to 0
-        uint8_t fixType;       // Fix type: 2: 2D-Fix 3: 3D-Fix
-        uint16_t year;     // Year (1-65635) of UTC time
-        uint8_t month;     // Month (1-12) of UTC time
-        uint8_t day;       // Day (1-31) of UTC time
-        uint8_t hour;      // Hour (0-23) of UTC time
-        uint8_t minute;        // Minute (0-59) of UTC time
-        uint8_t second;        // Second (0-60) of UTC time
-        uint8_t reserved1;     // Reserved
-        uint8_t numSV;     // Number of satellites used in the position fix
-        uint8_t reserved2;     // Reserved
-        uint8_t checksum[2];    
-});
-
-PACK(
-    struct OdoLogEntry{
+    struct LogRetrievePosExtra{
         UbloxHeader header;
         uint32_t entryIndex;       // The index of this log entry
         uint8_t version;       // The version of this message. Set to 0
@@ -1137,14 +1089,53 @@ PACK(
         uint8_t hour;      // Hour (0-23) of UTC time
         uint8_t minute;        // Minute (0-59) of UTC time
         uint8_t second;        // Second (0-60) of UTC time
-        uint8_t reserved2;     // Reserved
+        uint8_t reserved2[3];     // Reserved
         uint32_t distance;     // Odometer distance traveled
-        uint8_t reserved3;     // Reserved
+        uint8_t reserved3[12];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * LOG-RETRIEVEPOS Message Structure
+ * Position fix log entry
+ * Message Type: OUTPUT
+ * ID: 0x21  0x0B Payload Length=40 bytes
+ */
 PACK(
-    struct ByteStrLogEntry{
+    struct LogRetrievePos{
+        UbloxHeader header;
+        uint32_t entryIndex;    // The index of this log entry
+        int32_t lon;            // Longitude (deg) [scaled *1e-7]
+        int32_t lat;            // Latitude (deg) [scaled *1e-7]
+        int32_t hMSL;           // Height above mean sea level
+        uint32_t hAcc;          // Horizontal accuracy estimate
+        uint32_t gSpeed;        // Ground speed (2-D)
+        uint32_t heading;       // Heading
+        uint8_t version;        // The version of this message. Set to 0
+        uint8_t fixType;        // Fix type: 2: 2D-Fix 3: 3D-Fix
+        uint16_t year;          // Year (1-65635) of UTC time
+        uint8_t month;          // Month (1-12) of UTC time
+        uint8_t day;            // Day (1-31) of UTC time
+        uint8_t hour;           // Hour (0-23) of UTC time
+        uint8_t minute;         // Minute (0-59) of UTC time
+        uint8_t second;         // Second (0-60) of UTC time
+        uint8_t reserved1;      // Reserved
+        uint8_t numSV;          // Number of satellites used in the position fix
+        uint8_t reserved2;      // Reserved
+        uint8_t checksum[2];    
+});
+
+
+/*!
+ * LOG-RETRIEVESTRING Message Structure
+ * Position fix log entry
+ * Message Type: OUTPUT
+ * ID: 0x21  0x0D Payload Length=16+1*bytecount bytes
+ */
+ #define MAX_LOG_RETRIEVESTRING 100
+PACK(
+    struct LogRetrieveString{
         UbloxHeader header;
         uint32_t entryIndex;       // The index of this log entry
         uint8_t version;       // The version of this message. Set to 0
@@ -1157,19 +1148,55 @@ PACK(
         uint8_t second;        // Second (0-60) of UTC time
         uint8_t reserved2;     // Reserved
         uint16_t byteCount;        // Size of string in bytes
-        uint8_t bytes;     // The bytes of the string
+        uint8_t bytes[MAX_LOG_RETRIEVESTRING];     // The bytes of the string
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * LOG-RETRIEVE Message Structure
+ * Request log data
+ * Message Type: COMMAND
+ * ID: 0x21  0x09 Payload Length=12 bytes
+ */
 PACK(
-    struct StoreArbStrOnFlash{
+    struct LogRetrieve{
         UbloxHeader header;
-    uint8_t bytes;     // The string of bytes to be logged (maximum 256)
+        uint32_t startNumber;       // Index of first entry to be transferred
+        uint32_t entryCount;        // Number of log entries to transfer. The maximum is 256
+        uint8_t version;            // The version of this message. Set to 0
+        uint8_t reserved1[3];       // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * LOG-STRING Message Structure
+ * Store arbitrary string in on-board flash
+ * Message Type: COMMAND
+ * ID: 0x21  0x04 Payload Length=0+1*N bytes
+ */
 PACK(
-    struct MultiGNSSAckMsg{
+    struct LogString{
+        UbloxHeader header;
+        uint8_t bytes[256];     // The string of bytes to be logged (maximum 256)
+        uint8_t checksum[2];    
+});
+
+
+
+///////////////////////////////////////////////////////////
+// UBX-MGA
+///////////////////////////////////////////////////////////
+
+/*!
+ * MGA-ACK Message Structure
+ * Multi-GNSS Acknowledge message
+ * Message Type: OUTPUT
+ * ID: 0x13  0x60 Payload Length=8 bytes
+ */
+PACK(
+    struct MgaAck{
         UbloxHeader header;
         uint8_t type;      // Type, 1 = ACK, 0 = NACK
         uint8_t version;       // The version of this message, always set to 0
@@ -1181,90 +1208,113 @@ PACK(
                                 // 5: The receiver is not ready to use the message data
                                 // 6: The message type is unknown 255: Undefined error occured
         uint8_t msgId;     // UBX message ID of the ack'ed message
-        uint8_t msgPayloadStart;     // The first 4 bytes of the ack'ed message's payload
+        uint8_t msgPayloadStart[4];     // The first 4 bytes of the ack'ed message's payload
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MGA-ANO Message Structure
+ * Multi-GNSS AssistNow Offline Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x20 Payload Length=76 bytes
+ */
 PACK(
-    struct MultiGNSSOfflineAssist{
+    struct MgaAno{
         UbloxHeader header;
-        uint8_t type;      // message type (always 0x00)
-        uint8_t version;       // message version (always 0x00)
-        uint8_t svId;      // Satellite identifier (see Satellite Numbering)
-        uint8_t gnssId;        // GNSS identifier (see Satellite Numbering)
-        uint8_t year;      // years since the year 2000
-        uint8_t month;     // month (1..12)
-        uint8_t day;       // day (1..31)
-        uint8_t reserved1;     // Reserved
-        uint8_t data;      // assistance data
-        uint8_t reserved2;     // Reserved
+        uint8_t type;           // message type (always 0x00)
+        uint8_t version;        // message version (always 0x00)
+        uint8_t svId;           // Satellite identifier (see Satellite Numbering)
+        uint8_t gnssId;         // GNSS identifier (see Satellite Numbering)
+        uint8_t year;           // years since the year 2000
+        uint8_t month;          // month (1..12)
+        uint8_t day;            // day (1..31)
+        uint8_t reserved1;      // Reserved
+        uint8_t data[64];       // assistance data
+        uint8_t reserved2[4];   // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MGA-DBD Message Structure
+ * Navigation Database Dump Entry
+ * Message Type: INPUT/OUTPUT
+ * ID: 0x13  0x80 Payload Length=12+1*N bytes (max=164)
+ */
 PACK(
-    struct NavDataDumpEntry{
+    struct MgaDbd{
         UbloxHeader header;
-        uint8_t reserved1;     // Reserved
-        uint8_t data;      // fw specific data
+        uint8_t reserved1[12];      // Reserved
+        uint8_t data[152];      // fw specific data
         uint8_t checksum[2];    
 });
 
+///////////////////////////////////////////////////////////
+// UBX-MGA-FLASH
+
+/*!
+ * MGA-FLASH-DATA Message Structure
+ * Transfer MGA-ANO data block to flash
+ * Message Type: INPUT
+ * ID: 0x13  0x21 Payload Length=6+1*N bytes (max=512)
+ */
 PACK(
-    struct MGAFlashAck{
+    struct MgaFlashData{
         UbloxHeader header;
-        uint8_t type;      // Message type. Set to 3 for this message.
-        uint8_t version;       // FLASH-ACK message version (this is version 0).
-        uint8_t ack;       // Acknowledgement type. 0 - ACK: Message received and written to flash. 1 - NACK: Problem with last message, re-transmission required (this only happens while acknowledging a UBX-MGA_FLASH_DATA message). 2 - NACK: problem with last message, give up.
-        uint8_t reserved1;     // Reserved
-        uint16_t sequence;     // If acknowledging a UBX-MGA-FLASH-DATA message this is the Message sequence number being ack'ed. If acknowledging a UBX-MGA-FLASH-STOP message it will be set to 0xffff.
+        uint8_t type;           // Message type. Set to 1 for this message.
+        uint8_t version;        // FLASH-DATA message version (this is version 0).
+        uint16_t sequence;      // Message sequence number, starting at 0 and increamenting by 1 for each MGA-FLASH-DATA message sent.
+        uint16_t size;          // Payload size in bytes.
+        uint8_t data[506];      // Payload data.
         uint8_t checksum[2];    
-});
+}); 
 
+
+/*!
+ * MGA-FLASH-STOP Message Structure
+ * Finish flashing MGA-ANO data
+ * Message Type: INPUT
+ * ID: 0x13  0x21 Payload Length=2 bytes
+ */
 PACK(
-    struct MGAFlashData{
+    struct MgaFlashStop{
         UbloxHeader header;
-        uint8_t type;      // Message type. Set to 1 for this message.
-        uint8_t version;       // FLASH-DATA message version (this is version 0).
-        uint16_t sequence;     // Message sequence number, starting at 0 and increamenting by 1 for each MGA-FLASH-DATA message sent.
-        uint16_t size;     // Payload size in bytes.
-        uint8_t data;      // Payload data.
+        uint8_t type;           // Message type. Set to 2 for this message.
+        uint8_t version;        // FLASH-STOP message version (this is version 0).
         uint8_t checksum[2];    
 });
 
 
+/*!
+ * MGA-FLASH-ACK Message Structure
+ * Acknowledge last FLASH-DATA or -STOP
+ * Message Type: OUTPUT
+ * ID: 0x13  0x21 Payload Length=2 bytes
+ */
 PACK(
-    struct MGAFlashStop{
+    struct MgaFlashAck{
         UbloxHeader header;
-        uint8_t type;      // Message type. Set to 2 for this message.
-        uint8_t version;       // FLASH-STOP message version (this is version 0).
+        uint8_t type;           // Message type. Set to 3 for this message.
+        uint8_t version;        // FLASH-ACK message version (this is version 0).
+        uint8_t ack;            // Acknowledgement type. 0 - ACK: Message received and written to flash. 1 - NACK: Problem with last message, re-transmission required (this only happens while acknowledging a UBX-MGA_FLASH_DATA message). 2 - NACK: problem with last message, give up.
+        uint8_t reserved1;      // Reserved
+        uint16_t sequence;      // If acknowledging a UBX-MGA-FLASH-DATA message this is the Message sequence number being ack'ed. If acknowledging a UBX-MGA-FLASH-STOP message it will be set to 0xffff.
         uint8_t checksum[2];    
 });
 
-PACK(
-    struct GloAlmAssist{
-        UbloxHeader header;
-        uint8_t type;      // Message type. Set to 2 for this message (2 = Almanac).
-        uint8_t reserved1;     // Reserved
-        uint8_t svId;      // GLONASS Satellite identifier (see Satellite Numbering)
-        uint8_t reserved2;     // Reserved
-        uint16_t N;        // Reference calender day number of almanac within the four-year period (from string 5)
-        uint8_t M;     // Type of GLONASS satellite (1 indicates GLONASS-M)
-        uint8_t C;     // Unhealthy flag at instant of almanac upload (1 indicates operability of satellite)
-        int16_t tau;       // Coarse time correction to GLONASS time
-        uint16_t epsilon;      // Eccentricity
-        int32_t lambda;        // Longitude of the first (within the N-day) ascending node of satellite orbit in PC-90.02 coordinate system
-        int32_t deltaI;        // Correction to the mean value of inclination
-        uint32_t tLambda;      // Time of the first ascending node passage
-        int32_t deltaT;        // Correction to the mean value of Draconian period
-        int8_t deltaDT;        // Rate of change of Draconian perion
-        int8_t H;      // Carrier frequency number of navigation RF signal, Range=(-7 .. 6)
-        int16_t omega;     // Argument of perigee
-        uint8_t reserved3;     // Reserved
-        uint8_t checksum[2];    
-});
 
-PACK(
-    struct GloEphAssist{
+///////////////////////////////////////////////////////////
+// UBX-MGA-GLO
+
+/*!
+ * MGA-GLO-EPH Message Structure
+ * GLONASS Ephemeris Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x06 Payload Length=48 bytes
+ */
+ PACK(
+    struct MgaGloEph{
         UbloxHeader header;
         uint8_t type;      // Message type. Set to 1 for this message (1 = Ephemeris).
         uint8_t reserved1;     // Reserved
@@ -1288,12 +1338,49 @@ PACK(
         uint8_t E;     // Ephemeris data age indicator
         int8_t deltaTau;       // Time difference between L2 and L1 band
         int32_t tau;       // SV clock bias
-        uint8_t reserved3;     // Reserved
+        uint8_t reserved3[4];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MGA-GLO-ALM Message Structure
+ * GLONASS Ephemeris Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x06 Payload Length=36 bytes
+ */
 PACK(
-    struct GloAuxTimeOffsetAssist{
+    struct MgaGloAlm{
+        UbloxHeader header;
+        uint8_t type;      // Message type. Set to 2 for this message (2 = Almanac).
+        uint8_t reserved1;     // Reserved
+        uint8_t svId;      // GLONASS Satellite identifier (see Satellite Numbering)
+        uint8_t reserved2;     // Reserved
+        uint16_t N;        // Reference calender day number of almanac within the four-year period (from string 5)
+        uint8_t M;     // Type of GLONASS satellite (1 indicates GLONASS-M)
+        uint8_t C;     // Unhealthy flag at instant of almanac upload (1 indicates operability of satellite)
+        int16_t tau;       // Coarse time correction to GLONASS time
+        uint16_t epsilon;      // Eccentricity
+        int32_t lambda;        // Longitude of the first (within the N-day) ascending node of satellite orbit in PC-90.02 coordinate system
+        int32_t deltaI;        // Correction to the mean value of inclination
+        uint32_t tLambda;      // Time of the first ascending node passage
+        int32_t deltaT;        // Correction to the mean value of Draconian period
+        int8_t deltaDT;        // Rate of change of Draconian perion
+        int8_t H;      // Carrier frequency number of navigation RF signal, Range=(-7 .. 6)
+        int16_t omega;     // Argument of perigee
+        uint8_t reserved3[4];     // Reserved
+        uint8_t checksum[2];    
+});
+
+
+/*!
+ * MGA-GLO-TIMEOFFSET Message Structure
+ * GLONASS Auxiliary Time Offset Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x06 Payload Length=20 bytes
+ */
+PACK(
+    struct MgaGloTimeOffset{
         UbloxHeader header;
         uint8_t type;      // Message type. Set to 3 for this message (3 = time offsets).
         uint8_t reserved1;     // Reserved
@@ -1302,36 +1389,22 @@ PACK(
         int32_t tauGps;        // Correction to GPS time relative to GLONASS time
         int16_t B1;        // Coefficient to determine delta UT1
         int16_t B2;        // Rate of change of delta UT1
-        uint8_t reserved2;     // Reserved
+        uint8_t reserved2[4];     // Reserved
         uint8_t checksum[2];    
 });
 
 
+///////////////////////////////////////////////////////////
+// UBX-MGA-GPS
 
+/*!
+ * MGA-GPS-EPH Message Structure
+ * GPS Ephemeris Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x00 Payload Length=68 bytes
+ */
 PACK(
-    struct GPSAlmAssist{
-        UbloxHeader header;
-        uint8_t type;      // Message type. Set to 2 for this message (2 = Almanac).
-        uint8_t reserved1;     // Reserved
-        uint8_t svId;      // GPS Satellite identifier (see Satellite Numbering)
-        uint8_t svHealth;      // SV health information
-        uint16_t e;        // Eccentricity
-        uint8_t almWNa;        // Reference week number of almanac (the 8 bit WNa field)
-        uint8_t toa;       // Reference time of almanac
-        int16_t deltaI;        // Delta inclination angle at reference time
-        int16_t omegaDot;      // Rate of right ascension
-        uint32_t sqrtA;        // Square root of the semi-major axis
-        int32_t omega0;        // Longitude of ascending node of orbit plane
-        int32_t omega;     // Argument of perigee
-        int32_t m0;        // Mean anomaly at reference time
-        int16_t af0;       // Time polynomial coefficient 0 (8 MSBs)
-        int16_t af1;       // Time polynomial coefficient 1
-        uint8_t reserved2;     // Reserved
-        uint8_t checksum[2];    
-});
-
-PACK(
-    struct GPSEphAssist{
+    struct MgaGpsEph{
         UbloxHeader header;
         uint8_t type;      // Message type. Set to 1 for this message (1 = Ephemeris).
         uint8_t reserved1;     // Reserved
@@ -1363,42 +1436,68 @@ PACK(
         int32_t omega;     // Argument of perigee
         int32_t omegaDot;      // Rate of right ascension
         int16_t idot;      // Rate of inclination angle
-        uint8_t reserved4;     // Reserved
+        uint8_t reserved4[2];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MGA-GPS-ALM Message Structure
+ * GPS Almanac Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x00 Payload Length=36 bytes
+ */
 PACK(
-    struct GPSHealthAssist{
+    struct MgaGpsAlm{
+        UbloxHeader header;
+        uint8_t type;      // Message type. Set to 2 for this message (2 = Almanac).
+        uint8_t reserved1;     // Reserved
+        uint8_t svId;      // GPS Satellite identifier (see Satellite Numbering)
+        uint8_t svHealth;      // SV health information
+        uint16_t e;        // Eccentricity
+        uint8_t almWNa;        // Reference week number of almanac (the 8 bit WNa field)
+        uint8_t toa;       // Reference time of almanac
+        int16_t deltaI;        // Delta inclination angle at reference time
+        int16_t omegaDot;      // Rate of right ascension
+        uint32_t sqrtA;        // Square root of the semi-major axis
+        int32_t omega0;        // Longitude of ascending node of orbit plane
+        int32_t omega;     // Argument of perigee
+        int32_t m0;        // Mean anomaly at reference time
+        int16_t af0;       // Time polynomial coefficient 0 (8 MSBs)
+        int16_t af1;       // Time polynomial coefficient 1
+        uint8_t reserved2[4];     // Reserved
+        uint8_t checksum[2];    
+});
+
+
+/*!
+ * MGA-GPS-HEALTH Message Structure
+ * GPS Health Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x00 Payload Length=40 bytes
+ */
+PACK(
+    struct MgaGpsHealth{
         UbloxHeader header;
         uint8_t type;      // Message type. Set to 4 for this message (4 = health flags).
-        uint8_t reserved1;     // Reserved
-        uint8_t healthCode;        // Each byte represents a GPS SV (1-32). The 6 LSBs of each byte contains the 6 bit health code from subframes 4/5 page 25.
-        uint8_t reserved2;     // Reserved
+        uint8_t reserved1[3];     // Reserved
+        uint8_t healthCode[32];        // Each byte represents a GPS SV (1-32). The 6 LSBs of each byte contains the 6 bit health code from subframes 4/5 page 25.
+        uint8_t reserved2[4];     // Reserved
         uint8_t checksum[2];    
 });
 
-PACK(
-    struct GPSIonAssist{
-        UbloxHeader header;
-        uint8_t type;      // Message type. Set to 6 for this message (6 = ionosphere parameters).
-        uint8_t reserved1;     // Reserved
-        int8_t ionoAlpha0;     // Ionospheric parameter alpha0 [s]
-        int8_t ionoAlpha1;     // Ionospheric parameter alpha1 [s/semi-circle]
-        int8_t ionoAlpha2;     // Ionospheric parameter alpha2 [s/semi-circle^2]
-        int8_t ionoAlpha3;     // Ionospheric parameter alpha3 [s/semi-circle^3]
-        int8_t ionoBeta0;      // Ionospheric parameter beta0 [s]
-        int8_t ionoBeta1;      // Ionospheric parameter beta1 [s/semi-circle]
-        int8_t ionoBeta2;      // Ionospheric parameter beta2 [s/semi-circle^2]
-        int8_t ionoBeta3;      // Ionospheric parameter beta3 [s/semi-circle^3]
-        uint8_t reserved2;     // Reserved
-        uint8_t checksum[2];    
-});
 
+/*!
+ * MGA-GPS-UTC Message Structure
+ * GPS UTC Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x00 Payload Length=20 bytes
+ */
 PACK(
-    struct GPSUTCAssist{
+    struct MgaGpsUtc{
         UbloxHeader header;
         uint8_t type;      // Message type. Set to 5 for this message (5 = Time parameters).
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         int32_t utcA0;     // First parameter of UTC polynomial
         int32_t utcA1;     // Second parameter of UTC polynomial
         int8_t utcDtLS;        // Delta time due to current leap seconds
@@ -1407,53 +1506,68 @@ PACK(
         uint8_t utcWNlsf;      // Week number at the end of which the future leap second becomes effective (the 8 bit WNLSF field)
         uint8_t utcDn;     // Day number at the end of which the future leap second becomes effective
         int8_t utcDtLSF;       // Delta time due to future leap seconds
-        uint8_t reserved2;     // Reserved
+        uint8_t reserved2[2];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MGA-GPS-IONO Message Structure
+ * GPS Ionosphere Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x00 Payload Length=16 bytes
+ */
 PACK(
-    struct InitClockDriftAssist{
+    struct GPSIonAssist{
         UbloxHeader header;
-        uint8_t type;      // Message type. Set to 0uint16_t
-        uint8_t reserved1;     // Reserved
-        int32_t clkD;      // Clock drift
-        uint32_t clkDAcc;      // Clock drift accuracy
+        uint8_t type;      // Message type. Set to 6 for this message (6 = ionosphere parameters).
+        uint8_t reserved1[3];     // Reserved
+        int8_t ionoAlpha0;     // Ionospheric parameter alpha0 [s]
+        int8_t ionoAlpha1;     // Ionospheric parameter alpha1 [s/semi-circle]
+        int8_t ionoAlpha2;     // Ionospheric parameter alpha2 [s/semi-circle^2]
+        int8_t ionoAlpha3;     // Ionospheric parameter alpha3 [s/semi-circle^3]
+        int8_t ionoBeta0;      // Ionospheric parameter beta0 [s]
+        int8_t ionoBeta1;      // Ionospheric parameter beta1 [s/semi-circle]
+        int8_t ionoBeta2;      // Ionospheric parameter beta2 [s/semi-circle^2]
+        int8_t ionoBeta3;      // Ionospheric parameter beta3 [s/semi-circle^3]
+        uint8_t reserved2[4];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+///////////////////////////////////////////////////////////
+// UBX-MGA-INI
+
+/*!
+ * MGA-INI-POS_XYZ Message Structure
+ * Initial Position Assistancee ECEF
+ * Message Type: INPUT
+ * ID: 0x13  0x40 Payload Length=20 bytes
+ */
 PACK(
-    struct EOPAssist{
+    struct MgaIniPosXYZ{
         UbloxHeader header;
-        uint8_t type;      // Message type. Set to 0x30 for this message (0x30 = EOP).
-        uint8_t reserved1;     // Reserved
-        uint16_t d2kRef;       // reference time (days since 1.1.2000 12.00h UTC)
-        uint16_t d2kMax;       // expiration time (days since 1.1.2000 12.00h UTC)
-        int32_t xpP0;      // x_p t^0 polynomial term (offset)
-        int32_t xpP1;      // x_p t^1 polynomial term (drift)
-        int32_t ypP0;      // y_p t^0 polynomial term (offset)
-        int32_t ypP1;      // y_p t^1 polynomial term (drift)
-        int32_t dUT1;      // dUT1 t^0 polynomial term (offset)
-        int32_t ddUT1;     // dUT1 t^1 polynomial term (drift)
-        uint8_t reserved2;     // Reserved
+        uint8_t type;      // Message type. Set to 0x00 for this message (0x00 = Position - ECEF - XYZ).
+        uint8_t reserved1[3];     // Reserved
+        int32_t ecefX;     // WGS84 ECEF X coordinate (cm)
+        int32_t ecefY;     // WGS84 ECEF Y coordinate (cm)
+        int32_t ecefZ;     // WGS84 ECEF Z coordinate (cm)
+        uint32_t posAcc;       // Position accuracy (stddev) (cm)
         uint8_t checksum[2];    
 });
 
-PACK(
-    struct InitFreqAssist{
-        UbloxHeader header;
-        uint8_t type;      // Message type. Set to 0uint16_t
-        uint8_t reserved1;     // Reserved
-        uint8_t flags;     // Frequency reference (see graphic below)
-        int32_t freq;      // Frequency
-        uint32_t freqAcc;      // Frequency accuracy
-        uint8_t checksum[2];    
-});
 
+/*!
+ * MGA-INI-POS_LLH Message Structure
+ * Initial Position Assistancee LLH
+ * Message Type: INPUT
+ * ID: 0x13  0x40 Payload Length=20 bytes
+ */
 PACK(
-    struct InitPosAssistLLH{
+    struct MgaIniPosLLH{
         UbloxHeader header;
         uint8_t type;      // Message type. Set to 0x01 for this message (0x01 = Position - ECEF - LLA).
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         int32_t lat;       // WGS84 Latitude
         int32_t lon;       // WGS84 Longitude
         int32_t alt;       // WGS84 Altitude
@@ -1461,41 +1575,15 @@ PACK(
         uint8_t checksum[2];    
 });
 
-PACK(
-    struct InitPosAssistXYZ{
-        UbloxHeader header;
-        uint8_t type;      // Message type. Set to 0x00 for this message (0x00 = Position - ECEF - XYZ).
-        uint8_t reserved1;     // Reserved
-        int32_t ecefX;     // WGS84 ECEF X coordinate
-        int32_t ecefY;     // WGS84 ECEF Y coordinate
-        int32_t ecefZ;     // WGS84 ECEF Z coordinate
-        uint32_t posAcc;       // Position accuracy (stddev)
-        uint8_t checksum[2];    
-});
 
+/*!
+ * MGA-INI-TIME_UTC Message Structure
+ * Initial Time Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x40 Payload Length=24 bytes
+ */
 PACK(
-    struct InitTimeAssistGNSS{
-        UbloxHeader header;
-        uint8_t type;      // Message type. Set to 0uint8_t
-        uint8_t reserved1;     // Reserved
-        uint8_t ref;       // Reference to be used to set time (see graphic below)
-        uint8_t gnssId;        // Source of time information. Currently supported:
-                                // 0:  GPS time
-                                // 2:  Galileo time
-                                // 3:  BeiDou time
-                                // 6: GLONASS time: week = 834 + ((N4-1)*1461 + Nt)/7, tow = (((N4-1)*1461 + Nt) % 7) * 86400 + tod
-        uint8_t reserved2;     // Reserved
-        uint16_t week;     // GNSS week number
-        uint32_t tow;      // GNSS time of week
-        uint32_t ns;       // GNSS time of week, nanosecond part from 0 to 999,999,999
-        uint16_t tAccS;        // Seconds part of time accuracy
-        uint8_t reserved3;     // Reserved
-        uint32_t tAccNs;       // Nanoseconds part of time accuracy, from 0 to 999,999,999
-        uint8_t checksum[2];    
-});
-
-PACK(
-    struct InitTimeAssistUTC{
+    struct MgaIniTimeUTC{
         UbloxHeader header;
         uint8_t type;      // Message type. Set to 0uint8_t
         uint8_t reserved1;     // Reserved
@@ -1510,35 +1598,110 @@ PACK(
         uint8_t reserved2;     // Reserved
         uint32_t ns;       // Nanoseconds, from 0 to 999,999,999
         uint16_t tAccS;        // Seconds part of time accuracy
-        uint8_t reserved3;     // Reserved
+        uint8_t reserved3[2];     // Reserved
         uint32_t tAccNs;       // Nanoseconds part of time accuracy, from 0 to 999,999,999
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MGA-INI-TIME_GNSS Message Structure
+ * Initial Time Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x40 Payload Length=24 bytes
+ */
 PACK(
-    struct QZSSAlmAssist{
+    struct MgaIniTimeGNSS{
         UbloxHeader header;
-        uint8_t type;      // Message type. Set to 2 for this message (2 = Almanac).
+        uint8_t type;      // Message type. Set to 0uint8_t
         uint8_t reserved1;     // Reserved
-        uint8_t svId;      // QZSS Satellite identifier (see Satellite Numbering), Range 1-5
-        uint8_t svHealth;      // Almanac SV health information
-        uint16_t e;        // Almanac eccentricity
-        uint8_t almWNa;        // Reference week number of almanac (the 8 bit WNa field)
-        uint8_t toa;       // Reference time of almanac
-        int16_t deltaI;        // Delta inclination angle at reference time
-        int16_t omegaDot;      // Almanac rate of right ascension
-        uint32_t sqrtA;        // Almanac square root of the semi-major axis A
-        int32_t omega0;        // Almanac long of asc node of orbit plane at weekly
-        int32_t omega;     // Almanac argument of perigee
-        int32_t m0;        // Almanac mean anomaly at reference time
-        int16_t af0;       // Almanac time polynomial coefficient 0 (8 MSBs)
-        int16_t af1;       // Almanac time polynomial coefficient 1
-        uint8_t reserved2;     // Reserved
+        uint8_t ref;       // Reference to be used to set time (see graphic below)
+        uint8_t gnssId;        // Source of time information. Currently supported:
+                                // 0:  GPS time
+                                // 2:  Galileo time
+                                // 3:  BeiDou time
+                                // 6: GLONASS time: week = 834 + ((N4-1)*1461 + Nt)/7, tow = (((N4-1)*1461 + Nt) % 7) * 86400 + tod
+        uint8_t reserved2[2];     // Reserved
+        uint16_t week;     // GNSS week number
+        uint32_t tow;      // GNSS time of week
+        uint32_t ns;       // GNSS time of week, nanosecond part from 0 to 999,999,999
+        uint16_t tAccS;        // Seconds part of time accuracy
+        uint8_t reserved3[2];     // Reserved
+        uint32_t tAccNs;       // Nanoseconds part of time accuracy, from 0 to 999,999,999
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MGA-INI-CLKD Message Structure
+ * Initial Clock Drift Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x40 Payload Length=12 bytes
+ */
 PACK(
-    struct QZSSEphAssist{
+    struct MgaIniClkD{
+        UbloxHeader header;
+        uint8_t type;      // Message type. Set to 0x20
+        uint8_t reserved1[3];     // Reserved
+        int32_t clkD;      // Clock drift
+        uint32_t clkDAcc;      // Clock drift accuracy
+        uint8_t checksum[2];    
+});
+
+
+/*!
+ * MGA-INI-FREQ Message Structure
+ * Initial Frequency Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x40 Payload Length=12 bytes
+ */
+PACK(
+    struct MgaIniFreq{
+        UbloxHeader header;
+        uint8_t type;      // Message type. Set to 0uint16_t
+        uint8_t reserved1[2];     // Reserved
+        uint8_t flags;     // Frequency reference (see graphic below)
+        int32_t freq;      // Frequency
+        uint32_t freqAcc;      // Frequency accuracy
+        uint8_t checksum[2];    
+});
+
+
+/*!
+ * MGA-INI-EOP Message Structure
+ * Earth Orientation Parameters Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x40 Payload Length=17 bytes
+ */
+PACK(
+    struct MgaIniEop{
+        UbloxHeader header;
+        uint8_t type;      // Message type. Set to 0x30 for this message (0x30 = EOP).
+        uint8_t reserved1[3];     // Reserved
+        uint16_t d2kRef;       // reference time (days since 1.1.2000 12.00h UTC)
+        uint16_t d2kMax;       // expiration time (days since 1.1.2000 12.00h UTC)
+        int32_t xpP0;      // x_p t^0 polynomial term (offset)
+        int32_t xpP1;      // x_p t^1 polynomial term (drift)
+        int32_t ypP0;      // y_p t^0 polynomial term (offset)
+        int32_t ypP1;      // y_p t^1 polynomial term (drift)
+        int32_t dUT1;      // dUT1 t^0 polynomial term (offset)
+        int32_t ddUT1;     // dUT1 t^1 polynomial term (drift)
+        uint8_t reserved2[40];     // Reserved
+        uint8_t checksum[2];    
+});
+
+
+///////////////////////////////////////////////////////////
+// UBX-MGA-INI
+
+/*!
+ * MGA-QZSS-EPH Message Structure
+ * QZSS Ephemeris Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x05 Payload Length=68 bytes
+ */
+PACK(
+    struct MgaQzssEph{
         UbloxHeader header;
         uint8_t type;      // Message type. Set to 1 for this message (1 = Ephemeris).
         uint8_t reserved1;     // Reserved
@@ -1570,34 +1733,98 @@ PACK(
         int32_t omega;     // Argument of perigee
         int32_t omegaDot;      // Rate of right ascension
         int16_t idot;      // Rate of inclination angle
-        uint8_t reserved4;     // Reserved
+        uint8_t reserved4[2];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MGA-QZSS-ALM Message Structure
+ * QZSS Almanac Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x05 Payload Length=36 bytes
+ */
+PACK(
+    struct MgaQzssAlm{
+        UbloxHeader header;
+        uint8_t type;      // Message type. Set to 2 for this message (2 = Almanac).
+        uint8_t reserved1;     // Reserved
+        uint8_t svId;      // QZSS Satellite identifier (see Satellite Numbering), Range 1-5
+        uint8_t svHealth;      // Almanac SV health information
+        uint16_t e;        // Almanac eccentricity
+        uint8_t almWNa;        // Reference week number of almanac (the 8 bit WNa field)
+        uint8_t toa;       // Reference time of almanac
+        int16_t deltaI;        // Delta inclination angle at reference time
+        int16_t omegaDot;      // Almanac rate of right ascension
+        uint32_t sqrtA;        // Almanac square root of the semi-major axis A
+        int32_t omega0;        // Almanac long of asc node of orbit plane at weekly
+        int32_t omega;     // Almanac argument of perigee
+        int32_t m0;        // Almanac mean anomaly at reference time
+        int16_t af0;       // Almanac time polynomial coefficient 0 (8 MSBs)
+        int16_t af1;       // Almanac time polynomial coefficient 1
+        uint8_t reserved2[4];     // Reserved
+        uint8_t checksum[2];    
+});
+
+
+/*!
+ * MGA-QZSS-HEALTH Message Structure
+ * QZSS Health Assistance
+ * Message Type: INPUT
+ * ID: 0x13  0x05 Payload Length=12 bytes
+ */
 PACK(
     struct QZSSHeathAssist{
         UbloxHeader header;
         uint8_t type;      // Message type. Set to 4 for this message (4 = health flags).
-        uint8_t reserved1;     // Reserved
-        uint8_t healthCode;        // Each byte represents a QZSS SV (1-5). The 6 LSBs of each byte contains the 6 bit health code from subframes 4/5, data ID = 3, SV ID = 51
-        uint8_t reserved2;     // Reserved
+        uint8_t reserved1[3];     // Reserved
+        uint8_t healthCode[5];        // Each byte represents a QZSS SV (1-5). The 6 LSBs of each byte contains the 6 bit health code from subframes 4/5, data ID = 3, SV ID = 51
+        uint8_t reserved2[3];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+
+///////////////////////////////////////////////////////////
+// UBX-MON
+///////////////////////////////////////////////////////////
+
+/*!
+ * MON-GNSS Message Structure
+ * Information message GNSS selection
+ * Message Type: OUTPUT
+ * ID: 0x0A  0x28 Payload Length=8 bytes
+ */
 PACK(
-    struct InfoMsgGNSSSelect{
+    struct MonGnss{
         UbloxHeader header;
         uint8_t version;       // Type of the message, 1 for this type
         uint8_t Supported;     // A bit mask, saying which GNSS systems can be supported by this receiver (see graphic below)
         uint8_t Default;       // A bit mask, saying which GNSS systems are enabled in the current efuse default configuration for this receiver (see graphic below)
         uint8_t Enabled;       // A bit mask, saying which GNSS systems are currently enabled for this receiver (see graphic below)
         uint8_t Simultaneous;      // Maximum number of concurrent GNSS systems which can be supported by this receiver
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MON-HW2 Message Structure
+ * Extended Hardware Status
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x0A  0x0B Payload Length=28 bytes
+ */
+// TODO
+
+
+/*!
+ * MON-HW Message Structure
+ * Hardware Status
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x0A  0x09 Payload Length=60 bytes
+ */
 PACK(
-    struct HWStatus{
+    struct MonHw{
         UbloxHeader header;
         uint32_t pinSel;       // Mask of Pins Set as Peripheral/PIO
         uint32_t pinBank;      // Mask of Pins Set as Bank A/B
@@ -1610,32 +1837,83 @@ PACK(
         uint8_t flags;     // Flags (see graphic below)
         uint8_t reserved1;     // Reserved
         uint32_t usedMask;     // Mask of Pins that are used by the Virtual Pin Manager
-        uint8_t VP;        // Array of Pin Mappings for each of the 17 Physical Pins
+        uint8_t VP[17];        // Array of Pin Mappings for each of the 17 Physical Pins
         uint8_t jamInd;        // CW Jamming indicator, scaled (0 = no CW jamming, 255 = strong CW jamming)
-        uint8_t reserved2;     // Reserved
+        uint8_t reserved2[2];     // Reserved
         uint32_t pinIrq;       // Mask of Pins Value using the PIO Irq
         uint32_t pullH;        // Mask of Pins Value using the PIO Pull High Resistor
         uint32_t pullL;        // Mask of Pins Value using the PIO Pull Low Resistor
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MON-IO Message Structure
+ * I/O Subsystem Status
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x0A  0x02 Payload Length=0+20*N bytes
+ */
+
+
+/*!
+ * MON-MSGPP Message Structure
+ * Message Parse and Process Status
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x0A  0x06 Payload Length=120 bytes
+ */
+
+
+/*!
+ * MON-PATCH Message Structure
+ * Output information about installed patches.
+ * Message Type: OUPUT
+ * ID: 0x0A  0x27 Payload Length=4 + 16*nEntries bytes
+ */
 PACK(
-    struct OutputInfoPatch{
-        UbloxHeader header;
-        uint16_t version;      // Type of the message. 0uint8_t
-        uint16_t nEntries;     // The number of patches that is output.
+    struct MonPatchRepeated
         uint32_t patchInfo;        // Additional information about the patch not stated in the patch header. (see graphic below)
         uint32_t comparatorNumber;        // The number of the comparator.
         uint32_t patchAddress;     // The address that the targeted by the patch.
-        uint32_t patchData;        // The data that will be inserted at the patchAddress.
+        uint32_t patchData;        // The data that will be inserted at the patchAddress.   
+});
+PACK(
+    struct MonPatch
+        UbloxHeader header;
+        uint16_t version;      // Type of the message. 0uint8_t
+        uint16_t nEntries;     // The number of patches that is output.
+        MonPatchRepeated repeated_block[20];
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MON-RXBUF Message Structure
+ * Receiver Buffer Status
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x0A  0x07 Payload Length=24 bytes
+ */
+
+
+/*!
+ * MON-RXR Message Structure
+ * Receiver Status Information
+ * Message Type: OUTPUT
+ * ID: 0x0A  0x21 Payload Length=1 bytes
+ */
+
+
+/*!
+ * MON-SMGR Message Structure
+ * Synchronization Manager Status
+ * Only available with FTSproduct variant
+ * Message Type: OUTPUT
+ * ID: 0x0A  0x21 Payload Length=1 bytes
+ */
 PACK(
-    struct SyncMgrStatus{
+    struct MonSmgr{
         UbloxHeader header;
         uint8_t version;       // Message version (0 for this version)
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         uint32_t iTOW;     // Time of the week
         uint16_t intOsc;       // A bit mask, indicating the status of the local oscillator (see graphic below)
         uint16_t extOsc;       // A bit mask, indicating the status of the external oscillator (see graphic below)
@@ -1650,29 +1928,138 @@ PACK(
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * MON-TXBUF Message Structure
+ * Transmitter Buffer Status
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x0A  0x08 Payload Length=28 bytes
+ */
+
+
+/*!
+ * MON-VER Message Structure
+ * Poll Receiver/Software Version
+ * Message Type: POLLED
+ * ID: 0x0A  0x04 Payload Length=40+30*N bytes
+ */
+ PACK(
+    struct MonVerRepeated {
+        uint8_t extension[30];
+});
 PACK(
-    struct RcvrSoftwrVer{
+    struct MonVer {
         UbloxHeader header;
-//**?** Not sure what to do with CH[30] etc
-//221        
+        uint8_t swVersion[30];
+        uint8_t hwVersion[10];
+        MonVerRepeated repeated_block[10];
         uint8_t checksum[2];    
 });
 
+
+///////////////////////////////////////////////////////////
+// UBX-NAV
+
+/*!
+ * NAV-AOPSTATUS Message Structure
+ * AssistNow Autonomous Status
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x01  0x60 Payload Length=16 bytes
+ */
 PACK(
-    struct AssistNowAutoStatus{
+    struct NavAopStatus {
         UbloxHeader header;
         uint32_t iTOW;     // GPS time of week of the navigation epoch. See the description of iTOW for details.
         uint8_t aopCfg;        // AssistNow Autonomous configuration (see graphic below)
         uint8_t status;        // AssistNow Autonomous subsystem is idle (0) or running (not 0)
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[10];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+* NAV-CLOCK Message Structure
+* Clock Solution
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x22  Payload Length= 20 bytes
+*/
 PACK(
-    struct OdoSol{
+    struct NavClock{
+        UbloxHeader header;
+        uint32_t iTOW;
+        int32_t clkbias;    // clock bias in nanoseconds
+        int32_t clkdrift;   // clock drift in ns/s
+        uint32_t tacc;      // time accuracy estimate (ns)
+        uint32_t facc;      // frequency accuracy estimate (ps/s)
+        uint8_t checksum[2];
+});
+
+
+/*!
+* NAV-DGPS Message Structure
+* DGPS Data Used for NAV
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x31  Payload Length= (16 + 12*numChannels bytes)
+*/
+PACK(
+    struct NavDGPSReap{
+        uint8_t svid;
+        uint8_t flags;  // bitfield containing channel each sv is on and DGPS status
+        uint16_t agecorr;   // age of latest correction data (ms)
+        float prcorr;   // psuedorange correction   (m)
+        float prrcorr;  // psuedorange rate correction (m/sec)
+});
+
+PACK(
+    struct NavDGPS{
+        UbloxHeader header;
+        uint32_t iTOW;  // GPS ms time of week
+        int32_t age;    // age of newest correction data (ms)
+        int16_t baseID; // DGPS base station ID
+        int16_t basehealth; // DGPS base station health
+        uint8_t numchan;    // nomber of channels for which correction data is following
+        uint8_t status; // DGPS correction type status
+        uint16_t reserved;  // reserved
+        NavDGPSReap nav_dgps_reap;  // repeated portion of NAV-DGPS message
+        uint8_t checksum[2];
+});
+
+
+/*!
+* NAV-DOP Message Structure
+* This message outputs various DOPs. All 
+* DOP values are scaled by a factor of 100.
+* Ex. If gdop contains a value 156, the true
+* value is 1.56
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x04  Payload Length= 18 bytes
+*/
+PACK(
+    struct NavDOP{
+        UbloxHeader header;
+        uint32_t iTOW;  // GPS ms time of week (ms)
+        uint16_t gdop;  // Geometric DOP
+        uint16_t pdop;  // Position DOP
+        uint16_t tdop;  // Time DOP
+        uint16_t vdop;  // Vertical DOP
+        uint16_t hdop;  // Horizontal DOP
+        uint16_t ndop;  // Northing DOP
+        uint16_t edop;  // Easting DOP
+        uint8_t checksum[2];
+});
+
+
+/*!
+* NAV-ODO Message Structure
+* Odometer Solution
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x09  Payload Length= 20 bytes
+*/
+PACK(
+    struct NavOdo{
         UbloxHeader header;
         uint8_t version;       // Message version (0 for this version)
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         uint32_t iTOW;     // GPS time of week of the navigation epoch. See the description of iTOW for details.
         uint32_t distance;     // Ground distance since last reset
         uint32_t totalDistance;        // Total cumulative ground distance
@@ -1680,24 +2067,83 @@ PACK(
         uint8_t checksum[2];    
 });
 
+
+/*!
+* NAV-ORB Message Structure
+* GNSS Orbit Database Info
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x34  Payload Length= 8 + 6*numSv bytes
+*/
 PACK(
-    struct GNSSOrbDataInfo{
-        UbloxHeader header;
-        uint32_t iTOW;     // GPS time of week of the navigation epoch. See the description of iTOW for details.
-        uint8_t version;       // Message version (0, for this version)
-        uint8_t numSv;     // Number of SVs in the database
-        uint8_t reserved1;     // Reserved
+    struct NavOrbRepeated{
         uint8_t gnssId;        // GNSS ID
         uint8_t svId;      // Satellite ID
         uint8_t svFlag;        // Information Flags (see graphic below)
         uint8_t eph;       // Ephemeris data (see graphic below)
         uint8_t alm;       // Almanac data (see graphic below)
-        uint8_t otherOrb;      // Other orbit data available (see graphic below)
+        uint8_t otherOrb;      // Other orbit data available (see graphic below)   
+});
+PACK(
+    struct NavOrb{
+        UbloxHeader header;
+        uint32_t iTOW;     // GPS time of week of the navigation epoch. See the description of iTOW for details.
+        uint8_t version;       // Message version (0, for this version)
+        uint8_t numSv;     // Number of SVs in the database
+        uint8_t reserved1[2];       // Reserved
+        NavOrbRepeated repeated_block[MAX_SAT];
         uint8_t checksum[2];    
 });
 
+
+/*!
+* NAV-POSECEF Message Structure
+* Position Solution in ECEF
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x01  Payload Length= 20 bytes
+*/
 PACK(
-    struct NavPosVelTimeSol{
+    struct NavPosECEF{
+        UbloxHeader header;
+        uint32_t iTOW;
+        int32_t ecefX;
+        int32_t ecefY;
+        int32_t ecefZ;
+        uint32_t pAcc;
+        uint8_t checksum[2];
+});
+
+
+/*!
+* NAV-POSLLH Message Structure
+* This message outputs the Geodetic position in
+* the currently selected Ellipsoid. The default is
+* the WGS84 Ellipsoid, but can be changed with the
+* message CFG-DAT.
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x02  Payload Length=28 bytes
+*/
+PACK(
+    struct NavPosLLH{
+        UbloxHeader header;     //!< Ublox header
+        uint32_t iTOW;          //!< GPS millisecond time of week
+        int32_t longitude_scaled; //!< longitude in degrees. Scaling 1e-7
+        int32_t latitude_scaled; //!< latitude in degrees. Scaling 1e-7
+        int32_t height;          //!< height above ellipsoid [mm]
+        int32_t height_mean_sea_level; //!< height above mean sea level [mm]
+        uint32_t horizontal_accuracy; //!< horizontal accuracy estimate [mm]
+        uint32_t vertical_accuracy; //!< vertical accuracy estimate [mm]
+        uint8_t checksum[2];
+});
+
+
+/*!
+* NAV-PVT Message Structure
+* Navigation Position Velocity Time Solution
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x07  Payload Length=92 bytes
+*/
+PACK(
+    struct NavPVT{
         UbloxHeader header;
         uint32_t iTOW;     // GPS time of week of the navigation epoch. See the description of iTOW for details.
         uint16_t year;     // Year (UTC)
@@ -1731,20 +2177,39 @@ PACK(
         uint32_t sAcc;     // Speed accuracy estimate
         uint32_t headAcc;      // Heading accuracy estimate (both motion and vehicle)
         uint16_t pDOP;     // Position DOP
-        uint8_t reserved2;     // Reserved
+        uint8_t reserved2[6];     // Reserved
         int32_t headVeh;       // Heading of vehicle (2-D)
-        uint8_t reserved3;     // Reserved
+        uint8_t reserved3[4];     // Reserved
         uint8_t checksum[2];    
 });
 
 
+/*!
+* NAV-RESETODO Message Structure
+* Reset odometer
+* Message Type: COMMAND
+* ID: 0x01  0x10  Payload Length=0 bytes
+*/
 PACK(
-    struct SatInfo{
+    struct NavResetOdo{
+        UbloxHeader header;
+        uint8_t checksum[2];    
+});
+
+
+/*!
+* NAV-SAT Message Structure
+* Satellite Information
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x35  Payload Length=8 + 12*numSvs bytes
+*/
+PACK(
+    struct NavSat{
         UbloxHeader header;
         uint32_t iTOW;     // GPS time of week of the navigation epoch. See the description of iTOW for details.
         uint8_t version;       // Message version (1 for this version)
         uint8_t numSvs;        // Number of satellites
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[2];     // Reserved
         uint8_t gnssId;        // GNSS identifier (see Satellite numbering) for assignment
         uint8_t svId;      // Satellite identifier (see Satellite numbering) for assignment
         uint8_t cno;       // Carrier to noise ratio (signal strength)
@@ -1754,6 +2219,90 @@ PACK(
         uint32_t flags;        // Bitmask (see graphic below)
         uint8_t checksum[2];    
 });
+
+
+/*!
+* NAV-SBAS Message Structure
+* SBAS Status Data
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x32  Payload Length=12 + 12*cnt bytes
+*/
+
+
+/*!
+* NAV-SOL Message Structure
+* This message combines Position, velocity and
+* time solution in ECEF, including accuracy figures.
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x06  Payload Length=52 bytes
+*/
+#define NAVSOL_FLAG_GPSFIX_VALID 0b0001
+#define NAVSOL_FLAG_DGPS_USED_FOR_FIX 0b0010
+#define NAVSOL_FLAG_WEEK_NUM_VALID 0b0100
+#define NAVSOL_FLAG_TOW_VALID 0b1000
+
+PACK(
+    struct NavSol{
+        UbloxHeader header;
+        uint32_t iTOW;
+        int32_t fTOW;
+        int16_t week;
+        uint8_t gpsFix;
+        int8_t flags;
+        int32_t ecefX;
+        int32_t ecefY;
+        int32_t ecefZ;
+        uint32_t pAcc;
+        int32_t ecefVX;
+        int32_t ecefVY;
+        int32_t ecefVZ;
+        uint32_t sAcc;
+        uint16_t pDop;
+        uint8_t reserved1;
+        uint8_t numSV;
+        uint32_t reserved2;
+        uint8_t checksum[2];
+});
+
+
+/*!
+* NAV-SVINFO Message Structure
+* This message outputs info about SVs each 
+* channel is tracking
+* ID: 0x01  0x30  Payload Length= (8+12*NumChannels bytes)
+*/
+PACK(
+    struct SVInfoReapBlock{
+        uint8_t ch_num;     //!< Channel Number (255 if SV isn't assigned to channel)
+        uint8_t svid;       // Satellite ID number
+        uint8_t flags;      // bitfield (description of contents follows)
+        uint8_t quality;    // signal quality indicator bitfield
+        uint8_t cno;        // carrier to noise ratio (dbHz)
+        int8_t elev;        // elevation (deg)
+        int16_t azim;       // azimuth (deg)
+        int32_t prRes;      // Psuedorange residual (centimeters)
+});
+
+PACK(
+    struct NavSVInfo{
+        UbloxHeader header;     //!< Ublox header
+        uint32_t iTOW;  // GPS time of week (ms)
+        uint8_t numch;  //! number of channels following
+        uint8_t global_flags;   // Chip and Hardware Generation
+        uint16_t reserved2;
+        SVInfoReapBlock svinfo_reap[MAXCHAN]; // NOTE: TODO: True max needs to be confirmed
+        uint8_t checksum[2];
+});
+// Description of flags bitfield
+#define NAV_SVINFO_FLAGS_USED4NAV 0B00000001 // SV used in NAV sol
+#define NAV_SVINFO_FLAGS_DGPS_AVAIL 0B00000010 // DGPS corr data available for SV
+#define NAV_SVINFO_FLAGS_ORBIT_INFO_AVAIL 0B00000100 // Ephemeris of Almanac orbit info available for SV
+#define NAV_SVINFO_FLAGS_EPHEMS_AVAIL 0B00001000 // Ephemeris orbit info available for SV
+#define NAV_SVINFO_FLAGS_SV_UNHEALTHY 0B00010000 // SV unhealthy and not used
+#define NAV_SVINFO_FLAGS_ALMPLUS_AVAIL 0B00100000 // Almanac Plus orbit info used
+#define NAV_SVINFO_FLAGS_ASSNOW_AUTO 0B01000000 // AssistNow Autonomous orbit info used
+#define NAV_SVINFO_FLAGS_PR_SMOOTHED 0B10000000 // Carrier Smoothed pseudorange used (PPP)
+
 
 PACK(
     struct BDSTimeSolution{
