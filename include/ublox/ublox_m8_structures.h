@@ -144,251 +144,6 @@ PACK(
 });
 
 
-/////////////////////////////////////////////////////////////
-// Navigation Messages
-/////////////////////////////////////////////////////////////
-/*!
- * NAV-STATUS Message Structure
- * This message contains gps fix type and ttff
- * ID: 0x01 0x03 Payload Length=16 bytes
- */
-PACK(
-    struct NavStatus {
-        UbloxHeader header;
-        uint32_t iTOW;      // Time of Week (ms)
-        uint8_t fixtype;    // no fix=0x00, deadreckoning only=0x01, 2D=0x02, 3D=0x03, deadreck+GPS=0x04, time fix only=0x05, reserved=0x06..0xff
-        uint8_t flags;
-        uint8_t fixstat;
-        uint8_t flags2;
-        uint32_t ttff;      // TTFF (ms)
-        uint32_t msss;      // Milliseconds since startup/reset
-        uint8_t checksum[2];
-
-});
-
-
-
-
-
-/*!
-* NAV-VELNED Message Structure
-* This message outputs the current 3D velocity
-* in a north-east-down frame.
-* ID: 0x01  0x12  Payload Length=36 bytes
-*/
-PACK(
-    struct NavVelNed{
-        UbloxHeader header;		//!< Ublox header
-        uint32_t iTOW;
-        int32_t velocity_north; //!< north velocity [cm/s]
-        int32_t velocity_east; //!< east velocity [cm/s]
-        int32_t velocity_down; //!< down velocity [cm/s]
-        uint32_t speed; //!< 3D speed [cm/s]
-        uint32_t ground_speed; //!< 2D (ground) speed [cm/s]
-        int32_t heading_scaled; //!< heading [deg]. Scaling 1e-5
-        uint32_t speed_accuracy; //!< speed accuracy estimate [cm/s]
-        uint32_t heading_accuracy; //!< course/heading accuracy estimate [deg]. Scaling 1e-5
-        uint8_t checksum[2];
-});
-
-
-
-/*!
-* NAV-TIMEGPS Message Structure
-* This message outputs GPS Time information
-* ID: 0x01  0x20  Payload Length= 16 bytes
-*/
-PACK(
-    struct NavGPSTime{
-        UbloxHeader header;
-        uint32_t iTOW;  // GPS ms time of week
-        int32_t ftow;   // fractional nanoseconds remainder
-        int16_t week;   // GPS week
-        int8_t leapsecs;// GPS UTC leap seconds
-        uint8_t valid;  // validity flags
-        uint32_t tacc;  // time accuracy measurement (nanosecs)
-        uint8_t checksum[2];
-});
-
-/*!
-* NAV-TIMEUTC Message Structure
-* This message outputs UTC Time information
-* ID: 0x01  0x21  Payload Length= 20 bytes
-*/
-PACK(
-    struct NavUTCTime{
-        UbloxHeader header;
-        uint32_t iTOW;  // GPS time of week (msec)
-        uint32_t tacc;  // time accuracy measurement
-        int32_t nano;   // Nanoseconds of second
-        uint16_t year;  // year
-        uint8_t month;  // month
-        uint8_t day;    // day
-        uint8_t hour;   // hour
-        uint8_t min;    // minute
-        uint8_t sec;    // second
-        uint8_t valid;  // validity flags
-        uint8_t checksum[2];
-});
-
-
-
-
-
-
-
-
-// Parsed Ephemeris Parameters for a SV - NOT FINISHED
-PACK(
-    struct ParsedEphemData {
-        uint32_t prn;				//PRN number
-        uint8_t tow;				//time stamp of subframe 0 (s)
-        //uint8_t tow;				//time stamp of subframe 0 (s)
-        unsigned long health;		//health status, defined in ICD-GPS-200
-        unsigned long iode1;		//issue of ephemeris data 1
-        unsigned long iode2;		//issue of ephemeris data 2
-        unsigned long week;			//GPS week number
-        unsigned long zweek;		//z count week number
-        double toe;					//reference time for ephemeris (s)
-        double majaxis;				//semi major axis (m)
-        double dN;					//Mean motion difference (rad/s)
-        double anrtime;				//mean anomoly reference time (rad)
-        double ecc;					//eccentricity
-        double omega;				//arguement of perigee (rad)
-        double cuc;					//arugument of latitude - cos (rad)
-        double cus;					//argument of latitude - sine (rad)
-        double crc;					//orbit radius - cos (rad)
-        double crs;					//orbit radius - sine (rad)
-        double cic;					//inclination - cos (rad)
-        double cis;					//inclination - sine (rad)
-        double ia;					//inclination angle (rad)
-        double dia;					//rate of inclination angle (rad/s)
-        double wo;					//right ascension (rad)
-        double dwo;					//rate of right ascension (rad/s)
-        unsigned long iodc;			//issue of data clock
-        double toc;					//SV clock correction term (s)
-        double tgd;					//estimated group delay difference
-        double af0;					//clock aiging parameter 0
-        double af1;					//clock aiging parameter 1
-        double af2;					//clock aiging parameter 2
-//      yes_no spoof;			//anti spoofing on
-        double cmot;				//corrected mean motion
-        unsigned int ura;			//user range accuracy variance (value 0-15)
-});
-
-// Contains Ephemeris Parameters for all SVs
-PACK(
-    struct ParsedEphemeridesData{
-        ParsedEphemData sv_eph_data[MAX_SAT];
-});
-
-
-/*!
- * RXM-RAW Message Structure
- * This message contains raw DGPS measurements data
- * ID: 0x02 0x10 Payload Length = (8 + 24*#SVs) bytes
- */
-//#define RXMRAW_QUALITY_PR_DOP_GOOD 4 // Min value for pseudorange and doppler to be good    
-//#define RXMRAW_QUALITY_PR_DOP_CP_GOOD 4 // Min value for pseudorange, doppler, and carrier phase to be good
-PACK(
-    struct RawMeasReap{
-        double carrier_phase;           // cycles - Carrier Phase measurement
-        double psuedorange;             // m - Psuedorange measurement
-        float doppler;                  // Hz - Doppler Measurement
-        uint8_t svid;                   // SV Number
-        int8_t quality;                 // Nav Measurement Quality Indicator  -- (>=4 PR+DO OK) (>=5 PR+DO+CP OK) (<6 likel loss carrier lock)
-        int8_t cno;                     // dbHz - Carrier to Noise Ratio
-        uint8_t loss_of_lock_indicator; // Loss of Lock Indicator (RINEX Definition)
-});
-
-PACK(
-    struct RawMeas{
-        UbloxHeader header;
-        int32_t iTow;   // ms - Time of Week
-        int16_t week;   // weeks
-        uint8_t numSV;  // # of SVs following
-        uint8_t reserved;
-        RawMeasReap rawmeasreap[MAX_SAT];
-        uint8_t checksum[2];
-});
-
-
-/*!
- * RXM-SFRB Message Structure
- * This message contains the contents of a single subframe
- * w/ parity bits removed
- * ID: 0x02 0x11 Payload Length = (42) bytes
- */
-
-PACK(
-    struct SubframeData{
-        UbloxHeader header;
-        uint8_t chan;       // Channel Number
-        uint8_t svid;       // Satellite ID Number
-        int32_t words[10];  // Words of data
-            /*
-            Each word contains 24 bits of data (Bits 23 to 0).  The remaining 8
-            bits are undefined.  The direction within the Word is that the higher
-            order bits are received from the SV first.
-            Example:
-                The Preamble can be found in dwrd[0], at bit position 23 down to 16.
-            */
-        uint8_t checksum[2];
-});
-
-
-/*!
- * RXM-SVSI Message Structure
- * This message contains SV orbit knowledge for SVs
- * ID: 0x02 0x20 Payload Length = (8 + 6*#SVs) bytes
- */
-PACK(
-    struct SVStatusReap{
-        uint8_t svid;       // Satellite ID
-        uint8_t svflag;     // Information Flag
-        int16_t azim;       // Azimuth
-        int8_t elev;        // Elevation
-        uint8_t age;        // Age of almanac and ephemeris
-
-});
-
-PACK(
-    struct SVStatus{
-        UbloxHeader header;
-        int32_t iTow;       // ms - Time of Week
-        int16_t week;       // weeks - GPS Week
-        uint8_t numvis;     // Number of visible SVs
-        uint8_t numSV;      // # of SVs following
-        SVStatusReap svstatusreap[100]; // NOTE: TODO: Find the max repititions possible for this!! max thus far: (71)
-        uint8_t checksum[2];
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//New M8 Messages - Chris Gaddes
-
-//! UBX-ACK
- 
-
 
 ///////////////////////////////////////////////////////////
 // UBX-CFG
@@ -2266,9 +2021,31 @@ PACK(
 
 
 /*!
+ * NAV-STATUS Message Structure
+ * Receiver Navigation Status
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x01 0x03 Payload Length=16 bytes
+ */
+PACK(
+    struct NavStatus {
+        UbloxHeader header;
+        uint32_t iTOW;      // Time of Week (ms)
+        uint8_t fixtype;    // no fix=0x00, deadreckoning only=0x01, 2D=0x02, 3D=0x03, deadreck+GPS=0x04, time fix only=0x05, reserved=0x06..0xff
+        uint8_t flags;
+        uint8_t fixstat;
+        uint8_t flags2;
+        uint32_t ttff;      // TTFF (ms)
+        uint32_t msss;      // Milliseconds since startup/reset
+        uint8_t checksum[2];
+
+});
+
+
+/*!
 * NAV-SVINFO Message Structure
 * This message outputs info about SVs each 
 * channel is tracking
+* Message Type: PERIODIC/POLLED
 * ID: 0x01  0x30  Payload Length= (8+12*NumChannels bytes)
 */
 PACK(
@@ -2304,8 +2081,14 @@ PACK(
 #define NAV_SVINFO_FLAGS_PR_SMOOTHED 0B10000000 // Carrier Smoothed pseudorange used (PPP)
 
 
+/*!
+* NAV-TIMEBDS Message Structure
+* Bedou Time Solution
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x24  Payload Length= 20 bytes
+*/
 PACK(
-    struct BDSTimeSolution{
+    struct NavTimeBDS{
         UbloxHeader header;
         uint32_t iTOW;     // GPS time of week of the navigation epoch. See the description of iTOW for details.
         uint32_t SOW;      // BDS time of week (rounded to seconds)
@@ -2317,8 +2100,15 @@ PACK(
         uint8_t checksum[2];    
 });
 
+
+/*!
+* NAV-TIMEGLO Message Structure
+* GLONASS Time Solution
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x23  Payload Length= 20 bytes
+*/
 PACK(
-    struct GLOTimeSolution{
+    struct NavTimeGLO{
         UbloxHeader header;
         uint32_t iTOW;     // GPS time of week of the navigation epoch. See the description of iTOW for details.
         uint32_t TOD;      // GLONASS time of day (rounded to integer seconds)
@@ -2330,18 +2120,100 @@ PACK(
         uint8_t checksum[2];    
 });
 
+
+/*!
+* NAV-TIMEGPS Message Structure
+* GPS Time Solution
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x20  Payload Length= 16 bytes
+*/
 PACK(
-    struct MultiGNSSRawMeasData{
+    struct NavTimeGPS{
         UbloxHeader header;
-        //**?**R8 rcvTow;     // Measurement time of week in receiver local  time approximately aligned to the GPS time system. The receiver local time of week, week number and leap second information can be used to translate the time to other time systems. More information about the difference in time systems can be found in RINEX 3 documentation. For a receiver operating in GLONASS only mode, UTC time can be determined by subtracting the leapS field from GPS time regardless of whether the GPS leap seconds are valid.
-        uint16_t week;     // GPS week number in receiver local time.
-        int8_t leapS;      // GPS leap seconds (GPS-UTC). This field represents the receiver's best knowledge of the leap seconds offset. A flag is given in the recStat bitfield to indicate if the leap seconds are known.
-        uint8_t numMeas;       // Number of measurements to follow
-        uint8_t recStat;       // Receiver tracking status bitfield (see graphic below)
-        uint8_t reserved1;     // Reserved
-        //**?**R8 prMes;      // Pseudorange measurement [m]. GLONASS inter frequency channel delays are compensated with an internal calibration table.
-        //**?**R8 cpMes;      // Carrier phase measurement [cycles]. The carrier phase initial ambiguity is initialized using an approximate value to make the magnitude of the phase close to the pseudorange measurement. Clock resets are applied to both phase and code measurements in accordance with the RINEX specification.
-        //**?**R4 doMes;      // Doppler measurement (positive sign for approaching satellites) [Hz]
+        uint32_t iTOW;  // GPS ms time of week
+        int32_t ftow;   // fractional nanoseconds remainder
+        int16_t week;   // GPS week
+        int8_t leapsecs;// GPS UTC leap seconds
+        uint8_t valid;  // validity flags
+        uint32_t tacc;  // time accuracy measurement (nanosecs)
+        uint8_t checksum[2];
+});
+
+
+/*!
+* NAV-TIMEUTC Message Structure
+* UTC Time Solution
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x21  Payload Length= 20 bytes
+*/
+PACK(
+    struct NavUTCTime{
+        UbloxHeader header;
+        uint32_t iTOW;  // GPS time of week (msec)
+        uint32_t tacc;  // time accuracy measurement
+        int32_t nano;   // Nanoseconds of second
+        uint16_t year;  // year
+        uint8_t month;  // month
+        uint8_t day;    // day
+        uint8_t hour;   // hour
+        uint8_t min;    // minute
+        uint8_t sec;    // second
+        uint8_t valid;  // validity flags
+        uint8_t checksum[2];
+});
+
+
+/*!
+* NAV-VELECEF Message Structure
+* Velocity Solution in ECEF
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x11  Payload Length=20 bytes
+*/
+
+
+/*!
+* NAV-VELNED Message Structure
+* Velocity Solution in NED
+* Message Type: PERIODIC/POLLED
+* ID: 0x01  0x12  Payload Length=36 bytes
+*/
+PACK(
+    struct NavVelNED{
+        UbloxHeader header;     //!< Ublox header
+        uint32_t iTOW;
+        int32_t velocity_north; //!< north velocity [cm/s]
+        int32_t velocity_east; //!< east velocity [cm/s]
+        int32_t velocity_down; //!< down velocity [cm/s]
+        uint32_t speed; //!< 3D speed [cm/s]
+        uint32_t ground_speed; //!< 2D (ground) speed [cm/s]
+        int32_t heading_scaled; //!< heading [deg]. Scaling 1e-5
+        uint32_t speed_accuracy; //!< speed accuracy estimate [cm/s]
+        uint32_t heading_accuracy; //!< course/heading accuracy estimate [deg]. Scaling 1e-5
+        uint8_t checksum[2];
+});
+
+
+///////////////////////////////////////////////////////////
+// UBX-RXM
+
+/*!
+* RXM-PMREQ Message Structure
+* Requests a Power Management task
+* Message Type: COMMAND
+* ID: 0x02  0x41  Payload Length=8 bytes
+*/
+
+/*!
+* RXM-RAWX Message Structure
+* Multi-GNSS Raw Measurement Data
+* Message Type: PERIODIC/POLLED
+* ID: 0x02  0x15  Payload Length=16 + 32*numMeas bytes
+*/
+PACK(
+    struct RxmRawXRepeated{
+        double prMes;      // Pseudorange measurement [m]. GLONASS inter frequency channel delays are compensated with an internal calibration table.
+        double cpMes;      // Carrier phase measurement [cycles]. The carrier phase initial ambiguity is initialized using an approximate value to make the magnitude of the phase close to the pseudorange measurement. Clock resets are applied to both phase and code measurements in accordance with the RINEX specification.
+        float doMes;      // Doppler measurement (positive sign for approaching satellites) [Hz]
         uint8_t gnssId;        // GNSS identifier (see Satellite Numbering for a list of identifiers)
         uint8_t svId;      // Satellite identifier (see Satellite Numbering)
         uint8_t reserved2;     // Reserved
@@ -2353,11 +2225,32 @@ PACK(
         uint8_t doStdev;       // Estimated Doppler measurement standard deviation. (see graphic below)
         uint8_t trkStat;       // Tracking status bitfield (see graphic below)
         uint8_t reserved3;     // Reserved
+   
+});
+PACK(
+    struct RxmRawX{
+        UbloxHeader header;
+        double rcvTow;     // Measurement time of week in receiver local  time approximately aligned to the GPS time system. The receiver local time of week, week number and leap second information can be used to translate the time to other time systems. More information about the difference in time systems can be found in RINEX 3 documentation. For a receiver operating in GLONASS only mode, UTC time can be determined by subtracting the leapS field from GPS time regardless of whether the GPS leap seconds are valid.
+        uint16_t week;     // GPS week number in receiver local time.
+        int8_t leapS;      // GPS leap seconds (GPS-UTC). This field represents the receiver's best knowledge of the leap seconds offset. A flag is given in the recStat bitfield to indicate if the leap seconds are known.
+        uint8_t numMeas;       // Number of measurements to follow
+        uint8_t recStat;       // Receiver tracking status bitfield (see graphic below)
+        uint8_t reserved1[3];     // Reserved
+        RxmRawXRepeated repeated_block[MAX_SAT];
         uint8_t checksum[2];    
 });
 
+
+/*!
+* RXM-SFRBX Message Structure
+* Raw Subframe Data. Thus the message contains preamble, 
+* parity bits and all protocol specific overhead and is
+* sent out when new data is received from the transmitter.
+* Message Type: APERIODIC
+* ID: 0x02  0x15  Payload Length=16 + 32*numMeas bytes
+*/
 PACK(
-    struct RawSubframeData{
+    struct RxmSfrbX{
         UbloxHeader header;
         uint8_t gnssId;        // GNSS identifier (see Satellite Numbering)
         uint8_t svId;      // Satellite identifier (see Satellite Numbering)
@@ -2371,20 +2264,66 @@ PACK(
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * RXM-SVSI Message Structure
+ * SV Status Info
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x02 0x20 Payload Length = (8 + 6*#SVs) bytes
+ */
 PACK(
-    struct DiscOscilCtrl{
+    struct RxmSvsiRepeated{
+        uint8_t svid;       // Satellite ID
+        uint8_t svflag;     // Information Flag
+        int16_t azim;       // Azimuth
+        int8_t elev;        // Elevation
+        uint8_t age;        // Age of almanac and ephemeris
+
+});
+PACK(
+    struct RxmSvsi{
+        UbloxHeader header;
+        int32_t iTow;       // ms - Time of Week
+        int16_t week;       // weeks - GPS Week
+        uint8_t numvis;     // Number of visible SVs
+        uint8_t numSV;      // # of SVs following
+        RxmSvsiRepeated repeated_block[MAX_SAT]; // NOTE: TODO: Find the max repititions possible for this!! max thus far: (71)
+        uint8_t checksum[2];
+});
+
+
+///////////////////////////////////////////////////////////
+// UBX-TIM
+
+/*!
+ * TIM-DOSC Message Structure
+ * Disciplined oscillator control
+ * Only available with FTS product variant
+ * Message Type: OUTPUT
+ * ID: 0x0D 0x11 Payload Length = 8 bytes
+ */
+PACK(
+    struct TimDosc{
         UbloxHeader header;
         uint8_t version;       // Message version (0 for this version)
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         uint32_t value;        // The raw value to be applied to the DAC controlling the external oscillator. The least significant bits should be written to the DAC, with the higher bits being ignored.
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * TIM-FCHG Message Structure
+ * Oscillator frequency changed notification
+ * Only available with FTS product variant
+ * Message Type: NOTIFICATION
+ * ID: 0x0D 0x16 Payload Length = 32 bytes
+ */
 PACK(
-    struct OscilFreqChgdNoti{
+    struct TimFchg{
         UbloxHeader header;
         uint8_t version;       // Message version (0 for this version)
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         uint32_t iTOW;     // GPS time of week of the navigation epoch from which the sync manager obtains the GNSS specific data. Like for the NAV message, the iTOW can be used to group messages of a single sync manager run together (See the description of iTOW for details)
         int32_t intDeltaFreq;      // Frequency increment of the internal oscillator
         uint32_t intDeltaFreqUnc;     // Uncertainty of the internal oscillator frequency increment
@@ -2395,8 +2334,16 @@ PACK(
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * TIM-HOC Message Structure
+ * Host oscillator control
+ * Only available with FTS product variant
+ * Message Type: INPUT
+ * ID: 0x0D 0x17 Payload Length = 8 bytes
+ */
 PACK(
-    struct HostOscilCtrl{
+    struct TimHoc{
         UbloxHeader header;
         uint8_t version;       // Message version (0 for this version)
         uint8_t oscId;     // Id of oscillator:
@@ -2408,32 +2355,69 @@ PACK(
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * TIM-SMEAS Message Structure
+ * Source measurement
+ * Only available with FTS product variant
+ * Message Type: INPUT/OUTPUT
+ * ID: 0x0D 0x13 Payload Length = 12 + 24*numMeas bytes
+ */
 PACK(
-    struct SrcMeasure{
-        UbloxHeader header;
-        uint8_t version;       // Message version (0 for this version)
-        uint8_t numMeas;       // Number of measurements in repeated block
-        uint8_t reserved1;     // Reserved
-        uint32_t iTOW;     // Time of the week
-        uint8_t reserved2;     // Reserved
+    struct TimSmeasRepeated{
         uint8_t sourceId;      // Index of source. SMEAS can provide six measurement sources. The first four sourceId values represent measurements made by the receiver and sent to the host. The first of these with a sourceId value of 0 is a measurement of the internal oscillator against the current receiver time-and-frequency estimate. The internal oscillator is being disciplined against that estimate and this result represents the current offset between the actual and desired internal oscillator states. The next three sourceId values represent frequency and time measurements made by the receiver against the internal oscillator. sourceId 1 represents the GNSS-derived frequency and time compared with the internal oscillator frequency and time. sourceId2 give measurements of a signal  coming in on EXTINT0. sourceId 3 corresponds to a similar measurement on EXTINT1. The remaining two of these measurements (sourceId 4 and 5) are made by the host and sent to the receiver. A measurement with sourceId 4 is a measurement by the host of the internal oscillator and sourceId 5 indicates a host measurement of the external oscillator.
         uint8_t flags;     // Flags (see graphic below)
         int8_t phaseOffsetFrac;     // Sub-nanosecond phase offset; the total offset is the sum of phaseOffset and phaseOffsetFrac
         uint8_t phaseUncFrac;      // Sub-nanosecond phase uncertainty
         int32_t phaseOffset;       // Phase offset, positive if the source lags accurate phase and negative if the source is early
         uint32_t phaseUnc;     // Phase uncertainty (one standard deviation)
-        uint8_t reserved3;     // Reserved
+        uint8_t reserved3[4];     // Reserved
         int32_t freqOffset;        // Frequency offset, positive if the source frequency is too high, negative if the frequency is too low.
-        uint32_t freqUnc;      // Frequency uncertainty (one standard deviation)
+        uint32_t freqUnc;      // Frequency uncertainty (one standard deviation)   
+});
+PACK(
+    struct TimSmeas{
+        UbloxHeader header;
+        uint8_t version;       // Message version (0 for this version)
+        uint8_t numMeas;       // Number of measurements in repeated block
+        uint8_t reserved1[2];     // Reserved
+        uint32_t iTOW;     // Time of the week
+        uint8_t reserved2[4];     // Reserved
+        TimSmeasRepeated repeated_block[100];
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * TIM-SVIN Message Structure
+ * Source measurement
+ * Only available with FTS product variant
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x0D 0x04 Payload Length = 28 bytes
+ */
+
+
+/*!
+ * TIM-TM2 Message Structure
+ * Time mark data
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x0D 0x03 Payload Length = 28 bytes
+ */
+
+
+/*!
+ * TIM-TOS Message Structure
+ * Time Pulse Time and Frequency Data
+ * Only available with FTS product variant
+ * Message Type: PERIODIC
+ * ID: 0x0D 0x12 Payload Length = 56 bytes
+ */
 PACK(
-    struct TimePulseTimeFreqData{
+    struct TimTos{
         UbloxHeader header;
         uint8_t version;       // Message version (0 for this version)
         uint8_t gnssId;        // GNSS system used for reporting GNSS time (seeSatellite Numbering)
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[2];     // Reserved
         uint32_t flags;        // Flags (see graphic below)
         uint16_t year;     // Year of UTC time
         uint8_t month;     // Month of UTC time
@@ -2458,8 +2442,24 @@ PACK(
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * TIM-TP Message Structure
+ * Time Pulse Timedatat
+ * Message Type: PERIODIC/POLLED
+ * ID: 0x0D 0x01 Payload Length = 16 bytes
+ */
+
+
+/*!
+ * TIM-VCOCAL Command Message Structure
+ * VCO calibration extended command
+ * Only available with FTS product variant
+ * Message Type: COMMAND
+ * ID: 0x0D 0x15 Payload Length = 12 bytes
+ */
 PACK(
-    struct VCOCaliExtCmd{
+    struct TimVcoCalCommand{
         UbloxHeader header;
         uint8_t type;      // Message type (2 for this message)
         uint8_t version;       // Message version (0 for this version)
@@ -2471,68 +2471,131 @@ PACK(
                             // 2: EXTINT0
                             // 3: EXTINT1
                             // Option 0 should be used when calibrating the external oscillator. Options 1-3 should be used when calibrating the internal oscillator.
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[2];     // Reserved
         uint16_t raw0;     // First value used for calibration
         uint16_t raw1;     // Second value used for calibration
         uint16_t maxStepSize;      // Maximum step size to be used
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * TIM-VCOCAL Results Message Structure
+ * Results of the calibration
+ * Only available with FTS product variant
+ * Message Type: COMMAND
+ * ID: 0x0D 0x15 Payload Length = 12 bytes
+ */
 PACK(
-    struct RsltsCalibration{
+    struct TimVcoCalResults{
         UbloxHeader header;
         uint8_t type;      // Message type (3 for this message)
         uint8_t version;       // Message version (0 for this version)
         uint8_t oscId;     // Id of oscillator:
                             // 0: internal oscillator
                             // 1: external oscillator
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         uint16_t gainUncertainty;     // Relative gain uncertainty after calibration, 0 if calibration failed
         int32_t gainVco;       // Calibrated gain or 0 if calibration failed
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * TIM-VRFY Message Structure
+ * Sourced Time Verification
+ * Message Type: POLLED/ONCE
+ * ID: 0x0D 0x06 Payload Length = 20 bytes
+ */
+// TODO
+
+
+///////////////////////////////////////////////////////////
+// UBX-UPD
+///////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////
+// UBX-UPD-SOS
+
+/*!
+ * UPD-SOS Poll Message Structure
+ * Poll Backup File Restore Status
+ * Message Type: POLL REQUEST
+ * ID: 0x09 0x14 Payload Length = 0 bytes
+ */
 PACK(
-    struct CreateBackupFlash{
+    struct UpdSosPoll{
+        UbloxHeader header;
+        uint8_t checksum[2];    
+});
+
+
+/*!
+ * UPD-SOS Create Backup Message Structure
+ * Create Backup File in Flash
+ * Message Type: INPUT
+ * ID: 0x09 0x14 Payload Length = 4 bytes
+ */
+PACK(
+    struct UpdSosCreateBackup{
         UbloxHeader header;
         uint8_t cmd;       // Command (must be 0)
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * UPD-SOS Clear Backup Message Structure
+ * Create Backup File in Flash
+ * Message Type: INPUT
+ * ID: 0x09 0x14 Payload Length = 4 bytes
+ */
 PACK(
-    struct ClearBackupFlash{
+    struct UpdSosClearBackup{
         UbloxHeader header;
         uint8_t cmd;       // Command (must be 1)
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * UPD-SOS File Creation ACK Message Structure
+ * Backup File Creation Acknowledge
+ * Message Type: OUTPUT
+ * ID: 0x09 0x14 Payload Length = 8 bytes
+ */
 PACK(
-    struct AckBackupCreat{
+    struct UpdSosCreateBackupAck{
         UbloxHeader header;
         uint8_t cmd;       // Command (must be 2)
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         uint8_t response;      // 0: Not acknowledged
                                 // 1: Acknowledged
-        uint8_t reserved2;     // Reserved
+        uint8_t reserved2[3];     // Reserved
         uint8_t checksum[2];    
 });
 
+
+/*!
+ * UPD-SOS File Creation ACK Message Structure
+ * System Restored from Backup
+ * Message Type: OUTPUT
+ * ID: 0x09 0x14 Payload Length = 8 bytes
+ */
 PACK(
-    struct SysRestoreBackup{
+    struct UpsSosSystemRestoredFromBackup{
         UbloxHeader header;
         uint8_t cmd;       // Command (must be 3)
-        uint8_t reserved1;     // Reserved
+        uint8_t reserved1[3];     // Reserved
         uint8_t response;      // 0:  Unknown
                                 // 1:  Failed restoring from backup file 2:  Restored from backup file
                                 // 3:  Not restored (no backup)
-        uint8_t reserved2;     // Reserved
+        uint8_t reserved2[3];     // Reserved
         uint8_t checksum[2];    
 });
 
-
-//End new M8 Messages - Chris Gaddes
 
 
 enum Message_ID
