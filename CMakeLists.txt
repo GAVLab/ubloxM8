@@ -81,10 +81,10 @@ endif(BUILD_WITH_ROS)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # Add default source files
-set(UBLOX_SRCS src/ublox.cpp)
+set(UBLOX_SRCS src/ublox_m8.cpp)
 # Add default header files
-set(UBLOX_HEADERS include/ublox/ublox.h
-                  include/ublox/ublox_structures.h)
+set(UBLOX_HEADERS include/ublox/ublox_m8.h
+                  include/ublox/ublox_M8_structures.h)
 
 # Find Boost, if it hasn't already been found
 #set(Boost_USE_STATIC_LIBS ON)
@@ -121,14 +121,6 @@ IF(UBLOX_BUILD_EXAMPLES)
     add_executable(ublox_example examples/ublox_example.cpp)
     # Link the Test program to the ublox library
     target_link_libraries(ublox_example ublox ${UBLOX_LINK_LIBS})
-    # Compile the ublox Test program
-    add_executable(assist_example examples/assist_example.cpp)
-    # Link the Test program to the ublox library
-    target_link_libraries(assist_example ublox ${UBLOX_LINK_LIBS})
-    # Compile the ublox Test program
-    add_executable(record_pseudoranges examples/record_pseudoranges.cpp)
-    # Link the Test program to the ublox library
-    target_link_libraries(record_pseudoranges ublox ${UBLOX_LINK_LIBS})
 ENDIF(UBLOX_BUILD_EXAMPLES)
 
 ## Build tests
@@ -153,14 +145,14 @@ IF(NOT UBLOX_DONT_CONFIGURE_INSTALL AND NOT BUILD_WITH_ROS)
     ARCHIVE DESTINATION lib
   )
   
-  INSTALL(FILES include/ublox/ublox.h include/ublox/ublox_structures.h
+  INSTALL(FILES include/ublox/ublox_m8.h include/ublox/ublox_m8_structures.h
           DESTINATION include/ublox)
   
   IF(NOT CMAKE_FIND_INSTALL_PATH)
       set(CMAKE_FIND_INSTALL_PATH ${CMAKE_ROOT})
   ENDIF(NOT CMAKE_FIND_INSTALL_PATH)
   
-  INSTALL(FILES Findublox.cmake DESTINATION ${CMAKE_FIND_INSTALL_PATH}/Modules/)
+  INSTALL(FILES Findubloxm8.cmake DESTINATION ${CMAKE_FIND_INSTALL_PATH}/Modules/)
   
   ADD_CUSTOM_TARGET(uninstall @echo uninstall package)
   
