@@ -60,10 +60,12 @@ typedef boost::function<void(const std::string&)> ErrorMsgCallback;
 //! ACK
 //! AID
 //! CFG
-//! NAV
-//! MGA
 typedef boost::function<void(CfgPrt&, double&)> PortSettingsCallback;
 typedef boost::function<void(CfgNav5&, double&)> ConfigureNavigationParametersCallback;
+//! INF
+//! LOG
+//! MON
+//! NAV
 typedef boost::function<void(NavPosLLH&, double&)> NavPosLLHCallback;
 typedef boost::function<void(NavSol&, double&)> NavSolCallback;
 typedef boost::function<void(NavStatus&, double&)> NavStatusCallback;
@@ -74,20 +76,16 @@ typedef boost::function<void(NavUTCTime&, double&)> NavUTCTimeCallback;
 typedef boost::function<void(NavDOP&, double&)> NavDOPCallback;
 typedef boost::function<void(NavDGPS&, double&)> NavDGPSCallback;
 typedef boost::function<void(NavClock&, double&)> NavClockCallback;
-typedef boost::function<void(EphemSV&, double&)> AidEphCallback;
-typedef boost::function<void(AlmSV&, double&)> AidAlmCallback;
-typedef boost::function<void(AidHui&, double&)> AidHuiCallback;
-typedef boost::function<void(AidIni&, double&)> AidIniCallback;
-typedef boost::function<void(RawMeas&, double&)> RxmRawCallback;
-typedef boost::function<void(SubframeData&, double&)> RxmSubframeCallback;
-typedef boost::function<void(SVStatus&, double&)> RxmSvsiCallback;
-typedef boost::function<void(ParsedEphemData&, double&)> ParsedEphemCallback;
+//! MGA
+//! RXM
+//! TIM
+//! UPD
 
 class UbloxM8
 {
 public:
-	Ublox();
-	~Ublox();
+	UbloxM8();
+	~UbloxM8();
 
 	/*!
 	 * Connects to the uBlox receiver given a serial port.
@@ -97,9 +95,9 @@ public:
 	 */
 	bool Connect(std::string port, int baudrate=115200);
 
-   /*!
-    * Disconnects from the serial port
-    */
+    /*!
+     * Disconnects from the serial port
+     */
     void Disconnect();
 
     //! Indicates if a connection to the receiver has been established.
@@ -107,25 +105,17 @@ public:
 
     /*!
      * Pings the GPS to determine if it is properly connected
-     *
      * This method sends a ping to the GPS and waits for a response.
-     *
      * @param num_attempts The number of times to ping the device
      * before giving up
-     * @param timeout The time in milliseconds to wait for each reponse
-     *
      * @return True if the GPS was found, false if it was not.
      */
      bool Ping(int num_attempts=5);
 
-     void set_time_handler(GetTimeCallback time_handler) {
-         this->time_handler_ = time_handler;
-    }
-     void SaveConfiguration(); // TODO: Implement this
-     bool Reset(uint16_t nav_bbr_mask, uint8_t reset_mode);
-     bool ResetToColdStart(uint8_t reset_mode);
-     bool ResetToWarmStart();
-     bool ResetToHotStart();
+    //////////////////////////////////////////////////////
+    // Input Methods
+    //////////////////////////////////////////////////////
+    bool SendMessage(uint8_t *msg_ptr, size_t length);
 
     void SetPortConfiguration(bool ubx_input, bool ubx_output, bool nmea_input, bool nmea_output);
     bool ConfigureMessageRate(uint8_t class_id, uint8_t msg_id, uint8_t rate);
@@ -136,57 +126,32 @@ public:
     bool ConfigureNavigationParameters(uint8_t dynamic_model = 3, uint8_t fix_mode = 3);
 
     //////////////////////////////////////////////////////
-    // Diagnostic Callbacks
+    // Command Methods
     //////////////////////////////////////////////////////
-    DebugMsgCallback log_debug_;
-    InfoMsgCallback log_info_;
-    WarningMsgCallback log_warning_;
-    ErrorMsgCallback log_error_;
+    bool Reset(uint16_t nav_bbr_mask, uint8_t reset_mode);
+    bool ResetToColdStart(uint8_t reset_mode);
+    bool ResetToWarmStart();
+    bool ResetToHotStart();
 
     //////////////////////////////////////////////////////
-    // Data Callbacks
-    //////////////////////////////////////////////////////
-    HandleAcknowledgementCallback handle_acknowledgement_;
-    GetTimeCallback time_handler_; //!< Function pointer to callback function for timestamping
-
-    //////////////////////////////////////////////////////
-    // Receiver Configuration Settings Polling Messages
-    //////////////////////////////////////////////////////
-    void PollPortConfiguration(uint8_t port_identifier = 3);
-    bool PollNavigationParamterConfiguration();
-
-    //////////////////////////////////////////////////////
-    // Aiding Data Polling Messages
+    // Polling Methods
     //////////////////////////////////////////////////////
     bool PollMessage(uint8_t class_id, uint8_t msg_id);
-    bool PollMessageIndSV(uint8_t class_id, uint8_t msg_id, uint8_t svid);
-    bool PollEphem(int8_t svid = -1);
-    bool PollAlmanac(int8_t svid = -1);
-    bool PollHUI();
-    bool PollIniAid();
-    bool PollAllAidData();
-    bool PollRawDgpsData();
+    void PollPortConfiguration(uint8_t port_identifier = 3);
+    bool PollNavigationParamterConfiguration();
     bool PollSVStatus();
     bool PollSVInfo();
     bool PollNavStatus();
 
-//////////////////////////////////////////////////////
-// Send Aiding Data to Receiver
-//////////////////////////////////////////////////////
-    bool SendMessage(uint8_t *msg_ptr, size_t length);
-    bool SendAidIni(AidIni ini);
-    bool SendAidEphem(Ephemerides ephems);
-    bool SendRawMeas(RawMeas raw_meas);
-    bool SendAidHui(AidHui hui);
-    bool SendAidAlm(Almanac almanac);
+    //////////////////////////////////////////////////////
+    // Set Callback Methods
+    //////////////////////////////////////////////////////
+    void set_log_info_callback(InfoMsgCallback callback){log_info_=callback;};
+    void set_log_debug_callback(DebugMsgCallback callback){log_debug_=callback;};
+    void set_log_warning_callback(WarningMsgCallback callback){log_warning_=callback;};
+    void set_log_error_callback(ErrorMsgCallback callback){log_error_=callback;};
 
     void set_rxm_svsi_callback(RxmSvsiCallback callback){rxm_svsi_callback_=callback;};
-    void set_rxm_subframe_callback(RxmSubframeCallback callback){rxm_subframe_callback_=callback;};
-    void set_rxm_raw_callback(RxmRawCallback callback){rxm_raw_callback_=callback;};
-    void set_aid_alm_callback(AidAlmCallback callback){aid_alm_callback_=callback;};
-    void set_aid_eph_callback(AidEphCallback callback){aid_eph_callback_=callback;};
-    void set_aid_hui_callback(AidHuiCallback callback){aid_hui_callback_=callback;};
-    void set_aid_ini_callback(AidIniCallback callback){aid_ini_callback_=callback;};
     void set_nav_status_callback(NavStatusCallback callback){nav_status_callback_=callback;};
     void set_nav_solution_callback(NavSolCallback callback){nav_sol_callback_=callback;};
     void set_nav_position_llh_callback(NavPosLLHCallback callback){nav_pos_llh_callback_=callback;};
@@ -196,15 +161,14 @@ public:
     void set_nav_dop_callback(NavDOPCallback callback){nav_dop_callback_=callback;};
     void set_nav_dgps_callback(NavDGPSCallback callback){nav_dgps_callback_=callback;};
     void set_nav_clock_callback(NavClockCallback callback){nav_clock_callback_=callback;};
-    void set_get_time_callback(GetTimeCallback callback){time_handler_=callback;};
     void set_nav_vel_ned_callback(NavVelNedCallback callback){nav_vel_ned_callback_=callback;};
-    void set_port_settings_callback(PortSettingsCallback callback){port_settings_callback_ =callback;};
-    void set_configure_navigation_parameters_callback(ConfigureNavigationParametersCallback callback){
-        configure_navigation_parameters_callback_ = callback;};
-    void set_parsed_ephem_callback(ParsedEphemCallback callback){parsed_ephem_callback_ = callback;};
+
+    void set_get_time_callback(GetTimeCallback callback){time_handler_=callback;};
+    void set_time_handler(GetTimeCallback callback) {time_handler_ = callback;};
 
     void calculateCheckSum(uint8_t* in, size_t length, uint8_t* out);
-private:
+
+protected:
 
 	/*!
 	 * Starts a thread to continuously read from the serial port.
@@ -212,15 +176,11 @@ private:
 	 * Starts a thread that runs 'ReadSerialPort' which constatly reads
 	 * from the serial port.  When valid data is received, parse and then
 	 *  the data callback functions are called.
-	 *
-	 * @see xbow440::DataCallback, xbow440::XBOW440::ReadSerialPort, xbow440::XBOW440::StopReading
 	 */
 	void StartReading();
 
 	/*!
 	 * Starts the thread that reads from the serial port
-	 *
-	 * @see xbow440::XBOW440::ReadSerialPort, xbow440::XBOW440::StartReading
 	 */
 	void StopReading();
 
@@ -228,20 +188,12 @@ private:
 	 * Method run in a seperate thread that continuously reads from the
 	 * serial port.  When a complete packet is received, the parse
 	 * method is called to process the data
-	 *
-	 * @see xbow440::XBOW440::Parse, xbow440::XBOW440::StartReading, xbow440::XBOW440::StopReading
 	 */
 	void ReadSerialPort();
 
-    bool RequestLogOnChanged(std::string log); //!< request the given log from the receiver at the given rate
 	bool WaitForAck(int timeout); //!< waits for an ack from receiver (timeout in seconds)
 
     void BufferIncomingData(uint8_t* msg, size_t length);
-	//! Function to parse logs into a usable structure
-    void ParseLog(uint8_t* log, size_t logID);
-	//! Function to parse out useful ephemeris parameters
-    ParsedEphemData Parse_aid_eph(EphemSV ubx_eph);
-
 
     //////////////////////////////////////////////////////
     // Serial port reading members
@@ -254,8 +206,17 @@ private:
 
 
     //////////////////////////////////////////////////////
-    // New Data Callbacks
+    // Callbacks
     //////////////////////////////////////////////////////
+    //! Logging Callbacks
+    DebugMsgCallback log_debug_;
+    InfoMsgCallback log_info_;
+    WarningMsgCallback log_warning_;
+    ErrorMsgCallback log_error_;
+    //! Data Callbacks
+    HandleAcknowledgementCallback handle_acknowledgement_;
+    GetTimeCallback time_handler_; //!< Function pointer to callback function for timestamping
+    //! UBX Data Callbacks
     PortSettingsCallback port_settings_callback_;
     ConfigureNavigationParametersCallback configure_navigation_parameters_callback_;
     NavPosLLHCallback nav_pos_llh_callback_;
@@ -268,14 +229,7 @@ private:
     NavDOPCallback nav_dop_callback_;
     NavDGPSCallback nav_dgps_callback_;
     NavClockCallback nav_clock_callback_;
-    AidAlmCallback aid_alm_callback_;
-    AidEphCallback aid_eph_callback_;
-    AidHuiCallback aid_hui_callback_;
-    AidIniCallback aid_ini_callback_;
-    RxmRawCallback rxm_raw_callback_;
-    RxmSubframeCallback rxm_subframe_callback_;
     RxmSvsiCallback rxm_svsi_callback_;
-    ParsedEphemCallback parsed_ephem_callback_;
 	
 	//////////////////////////////////////////////////////
 	// Incoming data buffers
@@ -290,9 +244,11 @@ private:
 	double parse_timestamp_;		//!< time stamp when last parse began
 	unsigned short msgID;
 	
-  bool is_connected_; //!< indicates if a connection to the receiver has been established
-
-    
+    bool is_connected_; //!< indicates if a connection to the receiver has been established
+private:
+    //! Function to parse logs into a usable structure
+    void ParseLog(uint8_t* log, size_t logID);
+    UbxMessageId message_id;
 
 };
 }

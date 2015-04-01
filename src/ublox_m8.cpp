@@ -2,14 +2,9 @@
 #include <iostream>
 
 using namespace std;
-using namespace ublox;
+using namespace ublox_m8;
 
-/////////////////////////////////////////////////////
-// includes for default time callback
-//#define WIN32_LEAN_AND_MEAN
 #define PI 3.14159265
-//#include "boost/date_time/posix_time/posix_time.hpp"
-////////////////////////////////////////////////////
 
 inline void printHex(char *data, int length) {
     for (int i = 0; i < length; ++i) {
@@ -46,6 +41,10 @@ inline void DefaultWarningMsgCallback(const std::string &msg) {
     std::cout << "Ublox Warning: " << msg << std::endl;
 }
 
+inline void DefaultErrorMsgCallback(const std::string &msg) {
+    std::cout << "Ublox Error: " << msg << std::endl;
+}
+
 inline void DefaultPortSettingsCallback(CfgPrt port_settings,
         double time_stamp) {
     std::cout << "CFG-PRT:" << std::endl;
@@ -56,15 +55,11 @@ inline void DefaultConfigureNavigationParametersCallback(CfgNav5 cfg_nav,
     std::cout << "CFG-NAV5:" << std::endl;
 }
 
-inline void DefaultErrorMsgCallback(const std::string &msg) {
-    std::cout << "Ublox Error: " << msg << std::endl;
-}
-
-inline void DefaultNavSolCallback(ublox::NavSol nav_sol, double time_stamp) {
+inline void DefaultNavSolCallback(ublox_m8::NavSol nav_sol, double time_stamp) {
     std::cout << "NAV-SOL: " << endl;
 }
 
-inline void DefaultNavStatusCallback(ublox::NavStatus nav_status, double time_stamp) {
+inline void DefaultNavStatusCallback(ublox_m8::NavStatus nav_status, double time_stamp) {
     std::cout << "GPS Fix Type: ";
     if (nav_status.fixtype == 0x00) {
         std::cout << "No Fix" << std::endl;
@@ -93,37 +88,37 @@ inline void DefaultNavStatusCallback(ublox::NavStatus nav_status, double time_st
     }
 }
 
-inline void DefaultNavVelNedCallback(ublox::NavVelNed nav_vel_ned, double time_stamp) {
+inline void DefaultNavVelNedCallback(ublox_m8::NavVelNed nav_vel_ned, double time_stamp) {
     std::cout << "NAV-VELNED: " << endl;
 }
 
-inline void DefaultNavSVInfoCallback(ublox::NavSVInfo nav_sv_info, double time_stamp) {
+inline void DefaultNavSVInfoCallback(ublox_m8::NavSVInfo nav_sv_info, double time_stamp) {
     std::cout << "NAV-SVINFO: " << endl;
 }
 
-inline void DefaultNavGPSTimeCallback(ublox::NavGPSTime nav_gps_time,
+inline void DefaultNavGPSTimeCallback(ublox_m8::NavGPSTime nav_gps_time,
         double time_stamp) {
     std::cout << "NAV-GPSTIME: " << endl;
 }
 
-inline void DefaultNavUTCTimeCallback(ublox::NavUTCTime nav_utc_time,
+inline void DefaultNavUTCTimeCallback(ublox_m8::NavUTCTime nav_utc_time,
         double time_stamp) {
     std::cout << "NAV-UTCTIME: " << endl;
 }
 
-inline void DefaultNavDOPCallback(ublox::NavDOP nav_dop, double time_stamp) {
+inline void DefaultNavDOPCallback(ublox_m8::NavDOP nav_dop, double time_stamp) {
     std::cout << "NAV-DOP: " << endl;
 }
 
-inline void DefaultNavDGPSCallback(ublox::NavDGPS nav_dgps, double time_stamp) {
+inline void DefaultNavDGPSCallback(ublox_m8::NavDGPS nav_dgps, double time_stamp) {
     std::cout << "NAV-DGPS: " << endl;
 }
 
-inline void DefaultNavClockCallback(ublox::NavClock nav_clock, double time_stamp) {
+inline void DefaultNavClockCallback(ublox_m8::NavClock nav_clock, double time_stamp) {
     std::cout << "NAV-CLK: " << endl;
 }
 
-inline void DefaultNavPosLlhCallback(ublox::NavPosLLH nav_position, double time_stamp){
+inline void DefaultNavPosLlhCallback(ublox_m8::NavPosLLH nav_position, double time_stamp){
     /*std:: cout << "NAV-POSLLH: " << endl <<
                   "  GPS milliseconds: " << nav_position.iTOW << std::endl <<
                   "  Latitude: " << nav_position.latitude_scaled << std::endl <<
@@ -131,67 +126,11 @@ inline void DefaultNavPosLlhCallback(ublox::NavPosLLH nav_position, double time_
                   "  Height: " << nav_position.height << std::endl << std::endl;*/
 }
 
-inline void DefaultAidEphCallback(ublox::EphemSV eph_sv, double time_stamp) {
-    std::cout << "AID-EPH: " << std::endl;
-}
-
-inline void DefaultAidAlmCallback(ublox::AlmSV alm_sv, double time_stamp) {
-    std::cout << "AID-ALM: " << std::endl;
-
-}
-
-inline void DefaultAidHuiCallback(ublox::AidHui aid_hui, double time_stamp) {
-    std::cout << "AID-HUI: " << std::endl;
-}
-
-inline void DefaultAidIniCallback(ublox::AidIni aid_ini, double time_stamp) {
-    std::cout << "AID-INI: " << std::endl;
-}
-
-inline void DefaultRxmRawCallback(ublox::RawMeas raw_meas, double time_stamp) {
-    std::cout << "RXM-RAW: " << std::endl;
-}
-
-inline void DefaultRxmSubframeCallback(ublox::SubframeData subframe, double time_stamp) {
-    std::cout << "RXM-SFRB: " << std::endl;
-}
-
-inline void DefaultRxmSvsiCallback(ublox::SVStatus sv_stat, double time_stamp) {
+inline void DefaultRxmSvsiCallback(ublox_m8::SVStatus sv_stat, double time_stamp) {
     std::cout << "RXM-SVSI: " << std::endl;
 }
 
-inline void DefaultParsedEphemCallback(ublox::ParsedEphemData parsed_ephem_data,
-        double time_stamp) {
-    /*
-    std::cout << "Parsed ephemeris: " << std::endl;
-    //Display Parsed Eph Data:
-    cout << "PRN: " << parsed_ephem_data.prn << std::endl;
-    cout << "T_GD: " << parsed_ephem_data.tgd << std::endl;
-    cout << "t_oc: " << parsed_ephem_data.toc << std::endl;
-    cout << "af0: " << parsed_ephem_data.af0 << std::endl;
-    cout << "af1: " << parsed_ephem_data.af1 << std::endl;
-    cout << "af2: " << parsed_ephem_data.af2 << std::endl;
-    cout << "M_0: " << parsed_ephem_data.anrtime << std::endl;
-    cout << "deltan: " << parsed_ephem_data.dN << std::endl;
-    cout << "ecc: " << parsed_ephem_data.ecc << std::endl;
-    cout << "sqrtA: " << parsed_ephem_data.majaxis << std::endl;
-    cout << "OMEGA_0: " << parsed_ephem_data.wo << std::endl;
-    cout << "i_0: " << parsed_ephem_data.ia << std::endl;
-    cout << "Omega: " << parsed_ephem_data.omega << std::endl;
-    cout << "Omega dot: " << parsed_ephem_data.dwo << std::endl;
-    cout << "IDOT: " << parsed_ephem_data.dia << std::endl;
-    cout << "C_uc: " << parsed_ephem_data.cuc << std::endl;
-    cout << "C_us: " << parsed_ephem_data.cus << std::endl;
-    cout << "C_rc: " << parsed_ephem_data.crc << std::endl;
-    cout << "C_rs: " << parsed_ephem_data.crs << std::endl;
-    cout << "C_is: " << parsed_ephem_data.cis << std::endl;
-    cout << "t_oe: " << parsed_ephem_data.toe << std::endl;
-    cout << "----------------------------------" << std::endl;
-    cout << std::endl;
-*/
-}
-
-Ublox::Ublox() {
+UbloxM8::UbloxM8() {
     serial_port_ = NULL;
     reading_status_ = false;
     time_handler_ = DefaultGetTime;
@@ -199,12 +138,6 @@ Ublox::Ublox() {
     port_settings_callback_ = DefaultPortSettingsCallback;
     configure_navigation_parameters_callback_ = DefaultConfigureNavigationParametersCallback;
     nav_pos_llh_callback_ = DefaultNavPosLlhCallback;
-    aid_eph_callback_ = DefaultAidEphCallback;
-    aid_alm_callback_ = DefaultAidAlmCallback;
-    aid_hui_callback_ = DefaultAidHuiCallback;
-    aid_ini_callback_ = DefaultAidIniCallback;
-    rxm_raw_callback_ = DefaultRxmRawCallback;
-    rxm_subframe_callback_ = DefaultRxmSubframeCallback;
     rxm_svsi_callback_ = DefaultRxmSvsiCallback;
     nav_sol_callback_ = DefaultNavSolCallback;
     nav_status_callback_ = DefaultNavStatusCallback;
@@ -219,8 +152,6 @@ Ublox::Ublox() {
     log_info_ = DefaultInfoMsgCallback;
     log_warning_ = DefaultWarningMsgCallback;
     log_error_ = DefaultErrorMsgCallback;
-    //parsed_ephem_callback_ = DefaultParsedEphemCallback;
-    parsed_ephem_callback_ = NULL;
     reading_acknowledgement_ = false;
     bytes_remaining_ = false;
     header_length_ = 0;
@@ -232,11 +163,11 @@ Ublox::Ublox() {
     is_connected_ = false;
 }
 
-Ublox::~Ublox() {
+UbloxM8::~UbloxM8() {
     Disconnect();
 }
 
-bool Ublox::Connect(std::string port, int baudrate) {
+bool UbloxM8::Connect(std::string port, int baudrate) {
     //serial_port_ = new serial::Serial(port,baudrate,serial::Timeout::simpleTimeout(1000));
     serial::Timeout my_timeout(100, 1000, 0, 1000, 0);
     try {
@@ -310,7 +241,7 @@ bool Ublox::Connect(std::string port, int baudrate) {
 
 }
 
-bool Ublox::Ping(int num_attempts) {
+bool UbloxM8::Ping(int num_attempts) {
     try {
         while ((num_attempts--) > 0) {
             log_info_("Searching for Ublox receiver...");
@@ -385,7 +316,7 @@ bool Ublox::Ping(int num_attempts) {
     return false;
 }
 
-void Ublox::Disconnect() {
+void UbloxM8::Disconnect() {
 	try {
 		if (reading_status_) {
 			StopReading();
@@ -404,12 +335,12 @@ void Ublox::Disconnect() {
 	}
 }
 
-void Ublox::StartReading() {
+void UbloxM8::StartReading() {
 	try {
 		// create thread to read from sensor
 		reading_status_ = true;
 		read_thread_ptr_ = boost::shared_ptr<boost::thread>(
-				new boost::thread(boost::bind(&Ublox::ReadSerialPort, this)));
+				new boost::thread(boost::bind(&UbloxM8::ReadSerialPort, this)));
 	} catch (std::exception &e) {
 		std::stringstream output;
 		output << "Error starting ublox read thread: " << e.what();
@@ -417,11 +348,11 @@ void Ublox::StartReading() {
 	}
 }
 
-void Ublox::StopReading() {
+void UbloxM8::StopReading() {
     reading_status_ = false;
 }
 
-void Ublox::ReadSerialPort() {
+void UbloxM8::ReadSerialPort() {
     uint8_t buffer[MAX_NOUT_SIZE];
     size_t len;
 
@@ -446,11 +377,11 @@ void Ublox::ReadSerialPort() {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// AIDING DATA POLL MESSAGES
+// POLLING METHODS
 /////////////////////////////////////////////////////////////////////////////
 
 // Poll Message used to request for all SV
-bool Ublox::PollMessage(uint8_t class_id, uint8_t msg_id) {
+bool UbloxM8::PollMessage(uint8_t class_id, uint8_t msg_id) {
 	try {
 		uint8_t message[8];
 
@@ -484,7 +415,7 @@ bool Ublox::PollMessage(uint8_t class_id, uint8_t msg_id) {
 }
 
 // Poll Message used to request for one SV
-bool Ublox::PollMessageIndSV(uint8_t class_id, uint8_t msg_id, uint8_t svid) {
+bool UbloxM8::PollMessageIndSV(uint8_t class_id, uint8_t msg_id, uint8_t svid) {
     try {
 		uint8_t message[9];
 
@@ -518,100 +449,64 @@ bool Ublox::PollMessageIndSV(uint8_t class_id, uint8_t msg_id, uint8_t svid) {
 }
 
 // (CFG-NAV5) Polls current navigation algorithms parameters
-bool Ublox::PollNavigationParamterConfiguration() {
+bool UbloxM8::PollNavigationParamterConfiguration() {
     log_info_("Polling for CFG-NAV5..");
     return PollMessage(MSG_CLASS_CFG, MSG_ID_CFG_NAV5);
 }
 
-// (AID-EPH) Polls for Ephemeris data
-bool Ublox::PollEphem(int8_t svid) {
-
-    if (svid < -1) {
-        log_error_("Error in PollEphem: Invalid input 'svid'");
-        return 0;
-    } else if (svid == -1) { // Requests Ephemerides for all SVs
-        log_debug_("Polling for all Ephemerides..");
-        return PollMessage(MSG_CLASS_AID, MSG_ID_AID_EPH);
-    } else if (svid > 0) { // Requests Ephemeris for a single SV
-        stringstream output;
-        output << "Polling for SV# " << (int) svid << " Ephemeris..";
-        log_debug_(output.str());
-        return PollMessageIndSV(MSG_CLASS_AID, MSG_ID_AID_EPH, (uint8_t) svid);
-    } else {
-        log_error_("Error in PollEphem: Invalid input 'svid'");
-        return 0;
-    }
-}
-
-// (AID-ALM) Polls for Almanac Data
-bool Ublox::PollAlmanac(int8_t svid) {
-
-    if (svid < -1) {
-        log_error_("Error in PollAlmanac: Invalid input 'svid'");
-        return 0;
-    } else if (svid == -1) { // Requests Almanac Data for all SVs
-        log_debug_("Polling for all Almanac Data..");
-        return PollMessage(MSG_CLASS_AID, MSG_ID_AID_ALM);
-    } else if (svid > 0) { // Requests Almanac Data for a single SV
-        stringstream output;
-        output << "Polling for SV# " << (int) svid << " Almanac Data..";
-        log_debug_(output.str());
-        return PollMessageIndSV(MSG_CLASS_AID, MSG_ID_AID_ALM, (uint8_t) svid);
-    } else {
-        log_error_("Error in PollAlmanac: Invalid input 'svid'");
-        return 0;
-    }
-}
-
-// (AID-HUI) Polls GPS Health, UTC and Ionospheric Parameters
-bool Ublox::PollHUI() {
-    log_debug_("Polling for AID-HUI..");
-    return PollMessage(MSG_CLASS_AID, MSG_ID_AID_HUI);
-}
-
-// (AID-INI) Polls for Receiver Position, Time, Frequency, and Clock Drift
-bool Ublox::PollIniAid() {
-    log_debug_("Polling for AID-INI..");
-    return PollMessage(MSG_CLASS_AID, MSG_ID_AID_INI);
-}
-
-// (AID-DATA) Polls for All AID Data (-INI, -HUI, -EPH, -ALM)
-bool Ublox::PollAllAidData() {
-    log_debug_("Polling for AID-HUI, AID-INI, AID-EPH, & AID-ALM..");
-    return PollMessage(MSG_CLASS_AID, MSG_ID_AID_DATA);
-}
-
-// (RXM-RAW) Polls for Raw DGPS data
-bool Ublox::PollRawDgpsData() {
-    log_debug_("Polling for RXM-RAW..");
-    return PollMessage(MSG_CLASS_RXM, MSG_ID_RXM_RAW);
-}
-
 // (RXM-SVSI) Polls for Satellite Status Info
-bool Ublox::PollSVStatus() {
+bool UbloxM8::PollSVStatus() {
     log_debug_("Polling for RXM-SVSI..");
     return PollMessage(MSG_CLASS_RXM, MSG_ID_RXM_SVSI);
 }
 
 // (NAV-SVINFO) Polls for Space Vehicle Information
-bool Ublox::PollSVInfo() {
+bool UbloxM8::PollSVInfo() {
     log_debug_("Polling for NAV-SVINFO..");
     return PollMessage(MSG_CLASS_NAV, MSG_ID_NAV_SVINFO);
 }
 
 // (NAV-STATUS) Polls for Receiver Navigation Status
-bool Ublox::PollNavStatus() {
+bool UbloxM8::PollNavStatus() {
     log_debug_("Polling for Receiver NAV-STATUS..");
     return PollMessage(MSG_CLASS_NAV, MSG_ID_NAV_STATUS);
 }
 
+// Poll Port Configuration
+void UbloxM8::PollPortConfiguration(uint8_t port_identifier)
+{ // Port identifier = 3 for USB (default value if left blank)
+  //                 = 1 or 2 for UART
+    try {
+        uint8_t message[9];
+        message[0]=UBX_SYNC_BYTE_1;
+        message[1]=UBX_SYNC_BYTE_2;
+        message[2]=MSG_CLASS_CFG;
+        message[3]=MSG_ID_CFG_PRT;
+        message[4]=1;
+        message[5]=0;
+        message[6]=port_identifier;         //Port identifier for USB Port (3)
+        message[7]=0;                       // Checksum A
+        message[8]=0;                       // Checksum B
+
+        unsigned char* msg_ptr = (unsigned char*)&message;
+        calculateCheckSum(msg_ptr+2,5,msg_ptr+7);
+
+        serial_port_->write(msg_ptr, sizeof(message));
+        log_info_("Polling for Port Protocol Configuration.");
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error polling ublox port configuration: " << e.what();
+        log_error_(output.str());
+    }
+}
+
 ////////////////////////////////////////////////////////
-// (CFG) Configuration Messages
+// COMMANDS
 ////////////////////////////////////////////////////////
 // Receiver Reset
-bool Ublox::Reset(uint16_t nav_bbr_mask, uint8_t reset_mode) {
+bool UbloxM8::Reset(uint16_t nav_bbr_mask, uint8_t reset_mode) {
 	try {
-        ublox::CfgRst message;
+        ublox_m8::CfgRst message;
 
 		message.header.sync1 = UBX_SYNC_BYTE_1;
 		message.header.sync2 = UBX_SYNC_BYTE_2;
@@ -652,27 +547,31 @@ bool Ublox::Reset(uint16_t nav_bbr_mask, uint8_t reset_mode) {
 }
 
 // Receiver Reset Messages - Force Cold Start
-bool Ublox::ResetToColdStart(uint8_t reset_mode) {
+bool UbloxM8::ResetToColdStart(uint8_t reset_mode) {
     log_info_("Receiver reset to cold start state.");
     return Reset(0xFFFF, reset_mode);
 }
 
 // Receiver Reset Messages - Force Warm Start
-bool Ublox::ResetToWarmStart() {
+bool UbloxM8::ResetToWarmStart() {
     log_info_("Receiver reset to warm start state.");
     return Reset(0x0001, 0x02);
 }
 
 // Receiver Reset Messages - Force Hot Start
-bool Ublox::ResetToHotStart() {
+bool UbloxM8::ResetToHotStart() {
     log_info_("Receiver reset to hot start state.");
     return Reset(0x0000, 0x02);
 }
 
+////////////////////////////////////////////////////////
+// INPUT METHODS
+////////////////////////////////////////////////////////
+
 // (CFG-NAV5) Cofigure Navigation Algorithm Parameters
-bool Ublox::ConfigureNavigationParameters(uint8_t dynamic_model, uint8_t fix_mode){
+bool UbloxM8::ConfigureNavigationParameters(uint8_t dynamic_model, uint8_t fix_mode){
 	try {
-        ublox::CfgNav5 message;
+        ublox_m8::CfgNav5 message;
 
 		message.header.sync1 = UBX_SYNC_BYTE_1;
 		message.header.sync2 = UBX_SYNC_BYTE_2;
@@ -710,10 +609,10 @@ bool Ublox::ConfigureNavigationParameters(uint8_t dynamic_model, uint8_t fix_mod
 }
 
 // (CFG-MSG) Set message output rate for specified message
-bool Ublox::ConfigureMessageRate(uint8_t class_id, uint8_t msg_id,
+bool UbloxM8::ConfigureMessageRate(uint8_t class_id, uint8_t msg_id,
         uint8_t rate) {
 	try {
-        ublox::CfgMsgRate message;
+        ublox_m8::CfgMsgRate message;
 		message.header.sync1 = UBX_SYNC_BYTE_1;
 		message.header.sync2 = UBX_SYNC_BYTE_2;
 		message.header.message_class = MSG_CLASS_CFG;
@@ -737,10 +636,10 @@ bool Ublox::ConfigureMessageRate(uint8_t class_id, uint8_t msg_id,
 }
 
 // Set Port Configuration
-void Ublox::SetPortConfiguration(bool ubx_input, bool ubx_output,
+void UbloxM8::SetPortConfiguration(bool ubx_input, bool ubx_output,
         bool nmea_input, bool nmea_output) {
 	try {
-        ublox::CfgPrt message;
+        ublox_m8::CfgPrt message;
 		//std::cout << sizeof(message) << std::endl;
 		message.header.sync1 = UBX_SYNC_BYTE_1;
 		message.header.sync2 = UBX_SYNC_BYTE_2;
@@ -793,39 +692,8 @@ void Ublox::SetPortConfiguration(bool ubx_input, bool ubx_output,
 	}
 }
 
-// Poll Port Configuration
-void Ublox::PollPortConfiguration(uint8_t port_identifier)
-{ // Port identifier = 3 for USB (default value if left blank)
-  //                 = 1 or 2 for UART
-	try {
-		uint8_t message[9];
-		message[0]=UBX_SYNC_BYTE_1;
-		message[1]=UBX_SYNC_BYTE_2;
-		message[2]=MSG_CLASS_CFG;
-		message[3]=MSG_ID_CFG_PRT;
-		message[4]=1;
-		message[5]=0;
-		message[6]=port_identifier;         //Port identifier for USB Port (3)
-		message[7]=0;                       // Checksum A
-		message[8]=0;                       // Checksum B
-
-		unsigned char* msg_ptr = (unsigned char*)&message;
-		calculateCheckSum(msg_ptr+2,5,msg_ptr+7);
-
-		serial_port_->write(msg_ptr, sizeof(message));
-		log_info_("Polling for Port Protocol Configuration.");
-	} catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error polling ublox port configuration: " << e.what();
-		log_error_(output.str());
-	}
-}
-
-//////////////////////////////////////////////////////////////
-// Functions to  Aiding Data to Receiver
-//////////////////////////////////////////////////////////////
 // Send Message
-bool Ublox::SendMessage(uint8_t* msg_ptr, size_t length)
+bool UbloxM8::SendMessage(uint8_t* msg_ptr, size_t length)
 {
 	try {
 		stringstream output1;
@@ -858,154 +726,10 @@ bool Ublox::SendMessage(uint8_t* msg_ptr, size_t length)
 	}
 }
 
-// Send AID-INI to Receiver
-bool Ublox::SendAidIni(AidIni ini)
-{  
-    //stringstream output;
-	try {
-		unsigned char* msg_ptr = (unsigned char*)&ini;
-		calculateCheckSum(msg_ptr + 2, PAYLOAD_LENGTH_AID_INI + 4,
-							ini.checksum);
-
-		// Check that provided ini message is correct size before sending
-		if (sizeof(ini) == FULL_LENGTH_AID_INI)
-		{
-			bool sent_ini = SendMessage(msg_ptr, FULL_LENGTH_AID_INI);
-			//output << "Sending AID-INI to receiver.";
-			//log_debug_(output.str());
-			return true;
-		}
-		else
-		{
-			//output << "Provided AID-INI message not of correct length.";
-			//log_error_(output.str());
-			return false;
-		}
-	} catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error sending aid ini data to ublox: " << e.what();
-		log_error_(output.str());
-		return false;
-	}
-}
-
-// Send AID-EPH to Receiver
-bool Ublox::SendAidEphem(Ephemerides ephems)
-{
-	try {
-		bool sent_ephem [32];
-
-		for (uint8_t prn_index = 1; prn_index <= 32; prn_index++) {
-			//stringstream output;
-			if (ephems.ephemsv[prn_index].header.payload_length == PAYLOAD_LENGTH_AID_EPH_WITH_DATA) {
-				//output << "Sending AID-EPH for PRN # "
-						//<< (int) ephems.ephemsv[prn_index].svprn << " ..";
-				uint8_t* msg_ptr = (uint8_t*) &ephems.ephemsv[prn_index];
-				calculateCheckSum(msg_ptr + 2, PAYLOAD_LENGTH_AID_EPH_WITH_DATA + 4,
-									ephems.ephemsv[prn_index].checksum);
-				sent_ephem[prn_index] = SendMessage(msg_ptr, FULL_LENGTH_AID_EPH_WITH_DATA);
-
-			} else { // not a full ephemeris message
-				//output << "No AID-EPH data for PRN # " << (int) prn_index << " ..";
-			}
-			//log_debug_(output.str());
-		}
-		return true;
-	} catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error sending ephemeris data to ublox: " << e.what();
-		log_error_(output.str());
-		return false;
-	}
-}
-
-// Send AID-ALM to Receiver
-bool Ublox::SendAidAlm(Almanac almanac) {
-
-	try {
-		bool sent_alm [32];
-
-		for (uint8_t prn_index = 1; prn_index <= 32; prn_index++) {
-			//stringstream output;
-
-			if (almanac.almsv[prn_index].header.payload_length == PAYLOAD_LENGTH_AID_ALM_WITH_DATA) {
-				//output << "Sending AID-ALM for PRN # "
-						//<< (int) almanac.almsv[prn_index].svprn << " ..";
-				uint8_t* msg_ptr = (uint8_t*) &almanac.almsv[prn_index];
-				calculateCheckSum(msg_ptr + 2, PAYLOAD_LENGTH_AID_ALM_WITH_DATA + 4,
-									almanac.almsv[prn_index].checksum);
-				sent_alm[prn_index] = SendMessage(msg_ptr, FULL_LENGTH_AID_ALM_WITH_DATA);
-			}
-			else {
-				//output << "No AID-ALM data for PRN # " << (int) prn_index << " ..";
-			}
-			//log_debug_(output.str());
-		}
-		return true;
-
-	} catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error sending almanac data to ublox: " << e.what();
-		log_error_(output.str());
-		return false;
-	}
-}
-
-// Send AID-HUI to Receiver
-bool Ublox::SendAidHui(AidHui hui)
-{
-	try {
-		//stringstream output;
-
-		unsigned char* msg_ptr = (unsigned char*)&hui;
-		calculateCheckSum(msg_ptr + 2, PAYLOAD_LENGTH_AID_HUI + 4,
-									hui.checksum);
-
-		if (sizeof(hui) == FULL_LENGTH_AID_HUI)
-		{
-
-			bool sent_hui = SendMessage(msg_ptr, FULL_LENGTH_AID_HUI);
-			//output << "Sending AID-HUI to receiver..";
-			//log_info_(output.str());
-			return true;
-		}
-		else
-		{
-			//output << "Provided AID-HUI message not of correct length.";
-			//log_error_(output.str());
-			return false;
-		}
-	}catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error sending hui data to ublox: " << e.what();
-		log_error_(output.str());
-		return false;
-	}
-}
-
-// Send RXM-RAW to Receiver
-// NOTE: needs fixing still
-bool Ublox::SendRawMeas(RawMeas raw_meas)
-{
-	try {
-		stringstream output;
-
-		output << "Sending RXM-RAW to receiver..";
-		log_info_(output.str());
-		unsigned char* msg_ptr = (unsigned char*)&raw_meas;
-		return SendMessage(msg_ptr, sizeof(raw_meas));
-	} catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error sending raw data to ublox: " << e.what();
-		log_error_(output.str());
-		return false;
-	}
-}
-
 //////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////
-void Ublox::BufferIncomingData(uint8_t *msg, size_t length) {
+void UbloxM8::BufferIncomingData(uint8_t *msg, size_t length) {
     //MOOSTrace("Inside BufferIncomingData\n");
     //cout << length << endl;
     //cout << 0 << ": " << dec << (int)msg[0] << endl;
@@ -1124,20 +848,17 @@ void Ublox::BufferIncomingData(uint8_t *msg, size_t length) {
 	}
 }
 
-void Ublox::ParseLog(uint8_t *log, size_t logID) {
+void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 	try {
 		uint16_t payload_length;
 		uint8_t num_of_svs;
 		uint8_t num_of_channels;
+        ublox_m8::UbxMessageId message_id;
 
 		switch (logID) {
 
-		case AID_REQ: // Receiver outputs if accurate internally stored pos and time aren't available
-			log_info_("AID-REQ message received by computer.");
-			break;
-
 		case CFG_PRT:
-            ublox::CfgPrt cur_port_settings;
+            ublox_m8::CfgPrt cur_port_settings;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_port_settings, log, payload_length+HDR_CHKSM_LENGTH);
 			//printHex((char*) &cur_port_settings, sizeof(cur_port_settings));
@@ -1146,7 +867,7 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case CFG_NAV5:
-            ublox::CfgNav5 cur_nav5_settings;
+            ublox_m8::CfgNav5 cur_nav5_settings;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav5_settings, log, payload_length+HDR_CHKSM_LENGTH);
 			//printHex((char*) &cur_port_settings, sizeof(cur_port_settings));
@@ -1155,7 +876,7 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_STATUS:
-            ublox::NavStatus cur_nav_status;
+            ublox_m8::NavStatus cur_nav_status;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_status, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_status_callback_)
@@ -1163,7 +884,7 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_SOL:
-            ublox::NavSol cur_nav_sol;
+            ublox_m8::NavSol cur_nav_sol;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_sol, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_sol_callback_)
@@ -1171,7 +892,7 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_VELNED:
-            ublox::NavVelNed cur_nav_vel_ned;
+            ublox_m8::NavVelNed cur_nav_vel_ned;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_vel_ned, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_vel_ned_callback_)
@@ -1179,7 +900,7 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_POSLLH:
-            ublox::NavPosLLH cur_nav_position;
+            ublox_m8::NavPosLLH cur_nav_position;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_position, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_pos_llh_callback_)
@@ -1187,7 +908,7 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_SVINFO:
-            ublox::NavSVInfo cur_nav_svinfo;
+            ublox_m8::NavSVInfo cur_nav_svinfo;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			num_of_channels = (uint8_t) *(log+10);
 
@@ -1213,7 +934,7 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_GPSTIME:
-            ublox::NavGPSTime cur_nav_gps_time;
+            ublox_m8::NavGPSTime cur_nav_gps_time;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_gps_time, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_gps_time_callback_)
@@ -1221,7 +942,7 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_UTCTIME:
-            ublox::NavUTCTime cur_nav_utc_time;
+            ublox_m8::NavUTCTime cur_nav_utc_time;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_utc_time, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_utc_time_callback_)
@@ -1229,7 +950,7 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_DOP:
-            ublox::NavDOP cur_nav_dop;
+            ublox_m8::NavDOP cur_nav_dop;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_dop, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_dop_callback_)
@@ -1237,7 +958,7 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_DGPS:
-            ublox::NavDGPS cur_nav_dgps;
+            ublox_m8::NavDGPS cur_nav_dgps;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_dgps, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_dgps_callback_)
@@ -1245,145 +966,16 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_CLK:
-            ublox::NavClock cur_nav_clock;
+            ublox_m8::NavClock cur_nav_clock;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_clock, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_clock_callback_)
 				nav_clock_callback_(cur_nav_clock, read_timestamp_);
 			break;
 
-		case AID_EPH:
-            ublox::EphemSV cur_ephem_sv;
-
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-
-			//printHex((char*) &cur_ephem_sv, sizeof(cur_ephem_sv));
-			memcpy(&cur_ephem_sv, log, payload_length+HDR_CHKSM_LENGTH);
-
-			// If Ephemeris for SV is not present (payload_length is 8 bytes)
-			if (payload_length == PAYLOAD_LENGTH_AID_EPH_NO_DATA)
-			{
-				//stringstream output;
-				//output << "SV# " << (int) *(log+6) << "- no ephemeris data";
-				//log_debug_(output.str());
-			}
-			// If Ephemeris for SV is present (payload_length is 104 bytes)
-			else if (payload_length == PAYLOAD_LENGTH_AID_EPH_WITH_DATA)
-			{
-				//stringstream output;
-				//output << "SV# " << (int) *(log+6) << "- has ephemeris data";
-				//log_debug_(output.str());
-			}
-			else
-			{
-				log_error_("Error! AID-EPH log payload is not a valid length! (See ParseLog case AID_EPH)");
-			}
-
-			// make sure function pointer is set and call callback
-			if (aid_eph_callback_)
-				aid_eph_callback_(cur_ephem_sv, read_timestamp_);
-
-			if (parsed_ephem_callback_) {
-                ublox::ParsedEphemData parsed_ephem = Parse_aid_eph(cur_ephem_sv);
-				parsed_ephem_callback_(parsed_ephem, read_timestamp_);
-			}
-			break;
-
-		case AID_ALM:
-            ublox::AlmSV cur_alm_sv;
-
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-
-			memcpy(&cur_alm_sv, log, payload_length+HDR_CHKSM_LENGTH);
-
-			// If Almanac data for SV is not present (payload_length is 8 bytes)
-			if (payload_length == 8)
-			{
-				//stringstream output;
-				//output << "SV# " << (int) *(log+6) << "- no almanac data";
-				//log_debug_(output.str());
-			}
-
-			// If Almanac data for SV is present (payload_length is 40 bytes)
-			else if (payload_length == 40)
-			{
-				//stringstream output;
-				//output << "SV# " << (int) *(log+6) << "- has almanac data";
-				//log_debug_(output.str());
-			}
-			else
-			{
-				log_error_("Error! AID-ALM log payload is not 8 or 40 bytes long! (See ParseLog case AID_ALM)");
-			}
-
-			// make sure function pointer is set and call callback
-			if (aid_alm_callback_)
-				aid_alm_callback_(cur_alm_sv, read_timestamp_);
-			break;
-
-		case AID_HUI:
-            ublox::AidHui cur_aid_hui;
-
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-
-			memcpy(&cur_aid_hui, log, payload_length+HDR_CHKSM_LENGTH);
-
-			//log_debug_("Received AID-HUI Message.");
-
-			//printHex((char*)log, sizeof(cur_aid_hui));
-
-			// make sure function pointer is set and call callback
-			if (aid_hui_callback_)
-				aid_hui_callback_(cur_aid_hui, read_timestamp_);
-			break;
-
-		case AID_INI:
-            ublox::AidIni cur_aid_ini;
-
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-
-			memcpy(&cur_aid_ini, log, payload_length+HDR_CHKSM_LENGTH);
-
-			//printHex((char*) &cur_aid_ini, sizeof(cur_aid_ini));
-
-			if (aid_ini_callback_)
-				aid_ini_callback_(cur_aid_ini, read_timestamp_);
-
-			break;
-
-		case RXM_RAW:
-		// NOTE: Needs to be checked/fixed
-            ublox::RawMeas cur_raw_meas;
-
-            payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4)); // payload_length = 8+24*numSV
-			num_of_svs = (uint8_t) *(log+12);
-
-			// Copy portion of RXM-SVSI before repeated block (8 + header length)
-			memcpy(&cur_raw_meas, log, 6+8);
-			// Copy repeated block
-			for (uint8_t index = 0; index < num_of_svs; index++) {
-				memcpy(&cur_raw_meas.rawmeasreap[index],log+14+(index*24),24);
-			}
-			// Copy Checksum
-			memcpy(&cur_raw_meas.checksum, log+14+(24*num_of_svs), 2);
-
-            if (rxm_raw_callback_)
-                rxm_raw_callback_(cur_raw_meas, read_timestamp_);
-			break;
-
-        case RXM_SFRB:
-            ublox::SubframeData cur_subframe;
-
-            payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-            memcpy(&cur_subframe, log, payload_length+HDR_CHKSM_LENGTH);
-
-            if (rxm_subframe_callback_)
-                rxm_subframe_callback_(cur_subframe, read_timestamp_);
-            break;
-
         case RXM_SVSI:
 			// NOTE: needs to be checked!!
-            ublox::SVStatus cur_sv_status;
+            ublox_m8::SVStatus cur_sv_status;
 
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			num_of_svs = (uint8_t) *(log+13);
@@ -1425,7 +1017,7 @@ void Ublox::ParseLog(uint8_t *log, size_t logID) {
 	}
 } // end ParseLog()
 
-void Ublox::calculateCheckSum(uint8_t* in, size_t length, uint8_t* out) {
+void UbloxM8::calculateCheckSum(uint8_t* in, size_t length, uint8_t* out) {
 
 	try {
 		uint8_t a = 0;
@@ -1446,180 +1038,5 @@ void Ublox::calculateCheckSum(uint8_t* in, size_t length, uint8_t* out) {
 		log_error_(output.str());
 	}
 }
-
-ParsedEphemData Ublox::Parse_aid_eph(EphemSV ubx_eph) {
-    ublox::ParsedEphemData eph_data;
-	try {
-		union {
-			unsigned short s;
-			unsigned char c[2];
-		} union_unsigned_short;
-		union {
-			short s;
-			unsigned char c[2];
-		} union_short;
-		union {
-			unsigned int i;
-			unsigned char c[4];
-		} union_unsigned_int;
-		union {
-			int i;
-			unsigned char c[4];
-		} union_int;
-
-		//SVID
-		eph_data.prn = (uint8_t) ubx_eph.svprn;
-
-		//T_GD
-		eph_data.tgd = ((char) ubx_eph.SF[0].W[4].byte[0]) * pow(2.0,-31);
-
-		//t_oc
-		union_unsigned_short.c[0] = ubx_eph.SF[0].W[5].byte[0];
-		union_unsigned_short.c[1] = ubx_eph.SF[0].W[5].byte[1];
-		eph_data.toc = ((int) union_unsigned_short.s) * pow(2.0,4);
-
-		//a_f2
-		eph_data.af2 = ((char) ubx_eph.SF[0].W[6].byte[2]) * pow(2.0,-55);
-	
-		//a_f1
-		union_short.c[0] = ubx_eph.SF[0].W[6].byte[0];
-		union_short.c[1] = ubx_eph.SF[0].W[6].byte[1];
-		eph_data.af1 = ((double) union_short.s) * pow(2.0,-43);
-
-		 //a_f0
-		 union_int.c[0] = ubx_eph.SF[0].W[7].byte[0];
-		 union_int.c[1] = ubx_eph.SF[0].W[7].byte[1];
-		 union_int.c[2] = ubx_eph.SF[0].W[7].byte[2];
-		 union_int.i = union_int.i>>2;
-
-		 if ((union_int.c[2]>>5)&0x01)
-		 {
-		 union_int.c[2] = union_int.c[2] | 0xC0;
-		 union_int.c[3] = 0xff;
-		 }
-		 else
-		 {
-		 union_int.c[2] = union_int.c[2] & 0x3F;
-		 union_int.c[3] = 0x00;
-		 }
-		 eph_data.af0 = ((double) union_int.i) * pow(2.0,-31);
-
-		 //M_0 - Mean Anomoly Reference Time
-		 union_int.c[0] = ubx_eph.SF[1].W[2].byte[0];
-		 union_int.c[1] = ubx_eph.SF[1].W[2].byte[1];
-		 union_int.c[2] = ubx_eph.SF[1].W[2].byte[2];
-		 union_int.c[3] = ubx_eph.SF[1].W[1].byte[0];
-		 eph_data.anrtime = ((double) union_int.i) * pow(2.0,-31) * PI;
-
-		 //deltan
-		 union_short.c[0] = ubx_eph.SF[1].W[1].byte[1];
-		 union_short.c[1] = ubx_eph.SF[1].W[1].byte[2];
-		 eph_data.dN = ((double) union_short.s) * pow(2.0,-43) * PI;
-
-		 //ecc - Eccentricity
-		 union_unsigned_int.c[0] = ubx_eph.SF[1].W[4].byte[0];
-		 union_unsigned_int.c[1] = ubx_eph.SF[1].W[4].byte[1];
-		 union_unsigned_int.c[2] = ubx_eph.SF[1].W[4].byte[2];
-		 union_unsigned_int.c[3] = ubx_eph.SF[1].W[3].byte[0];
-		 eph_data.ecc = ((double) union_unsigned_int.i) * pow(2.0,-33);
-
-		 //sqrtA - Square root of the semi-major axis
-		 union_unsigned_int.c[0] = ubx_eph.SF[1].W[6].byte[0];
-		 union_unsigned_int.c[1] = ubx_eph.SF[1].W[6].byte[1];
-		 union_unsigned_int.c[2] = ubx_eph.SF[1].W[6].byte[2];
-		 union_unsigned_int.c[3] = ubx_eph.SF[1].W[5].byte[0];
-		 eph_data.majaxis = ((double) union_unsigned_int.i) * pow(2.0,-19);
-
-		 //OMEGA_0 - Longitude of Ascending Node of Orbit Plane at Weekly Epoch
-		 union_int.c[0] = ubx_eph.SF[2].W[1].byte[0];
-		 union_int.c[1] = ubx_eph.SF[2].W[1].byte[1];
-		 union_int.c[2] = ubx_eph.SF[2].W[1].byte[2];
-		 union_int.c[3] = ubx_eph.SF[2].W[0].byte[0];
-		 eph_data.wo = ((double) union_int.i) * pow(2.0,-31) * PI;
-
-		 //i_0 - Inclination Angle
-		 union_int.c[0] = ubx_eph.SF[2].W[3].byte[0];
-		 union_int.c[1] = ubx_eph.SF[2].W[3].byte[1];
-		 union_int.c[2] = ubx_eph.SF[2].W[3].byte[2];
-		 union_int.c[3] = ubx_eph.SF[2].W[2].byte[0];
-		 eph_data.ia = ((double) union_int.i) * pow(2.0,-31) * PI;
-
-		 //omega
-		 union_int.c[0] = ubx_eph.SF[2].W[5].byte[0];
-		 union_int.c[1] = ubx_eph.SF[2].W[5].byte[1];
-		 union_int.c[2] = ubx_eph.SF[2].W[5].byte[2];
-		 union_int.c[3] = ubx_eph.SF[2].W[4].byte[0];
-		 eph_data.omega = ((double) union_int.i) * pow(2.0,-31) * PI;
-
-		 //OMEGADOT
-		 union_int.c[0] = ubx_eph.SF[2].W[6].byte[0];
-		 union_int.c[1] = ubx_eph.SF[2].W[6].byte[1];
-		 union_int.c[2] = ubx_eph.SF[2].W[6].byte[2];
-
-		 if ((union_int.c[2]>>7)&0x01)
-		 {
-		 union_int.c[3] = 0xff;
-		 }
-		 else
-		 {
-		 union_int.c[3] = 0x00;
-		 }
-		 eph_data.dwo = ((double) union_int.i) * pow(2.0,-43) * PI;
-
-		 //IDOT - Rate of Inclination Angle
-		 union_short.c[0] = ubx_eph.SF[2].W[7].byte[0];
-		 union_short.c[1] = ubx_eph.SF[2].W[7].byte[1];
-		 union_short.s = union_short.s>>2;
-		 if ((union_short.c[1]>>5)&0x01)
-		 {
-		 union_int.c[1] = union_short.c[1] | 0xC0;
-		 }
-		 else
-		 {
-		 union_int.c[1] = union_short.c[1] & 0x3F;
-		 }
-		 eph_data.dia = ((double) union_short.s) * pow(2.0,-43) * PI;
-
-		 //C_uc
-		 union_short.c[0] = ubx_eph.SF[1].W[3].byte[1];
-		 union_short.c[1] = ubx_eph.SF[1].W[3].byte[2];
-		 eph_data.cuc = ((double) union_short.s) * pow(2.0,-29);
-
-		 //C_us
-		 union_short.c[0] = ubx_eph.SF[1].W[5].byte[1];
-		 union_short.c[1] = ubx_eph.SF[1].W[5].byte[2];
-		 eph_data.cus = ((double) union_short.s) * pow(2.0,-29);
-
-		 //C_rc
-		 union_short.c[0] = ubx_eph.SF[2].W[4].byte[1];
-		 union_short.c[1] = ubx_eph.SF[2].W[4].byte[2];
-		 eph_data.crc = ((double) union_short.s) * pow(2.0,-5);
-
-		 //C_rs
-		 union_short.c[0] = ubx_eph.SF[1].W[0].byte[0];
-		 union_short.c[1] = ubx_eph.SF[1].W[0].byte[1];
-		 eph_data.crs = ((double) union_short.s) * pow(2.0,-5);
-
-		 //C_ic
-		 union_short.c[0] = ubx_eph.SF[2].W[0].byte[1];
-		 union_short.c[1] = ubx_eph.SF[2].W[0].byte[2];
-		 eph_data.cic = ((double) union_short.s) * pow(2.0,-29);
-
-		 //C_is
-		 union_short.c[0] = ubx_eph.SF[2].W[2].byte[1];
-		 union_short.c[1] = ubx_eph.SF[2].W[2].byte[2];
-		 eph_data.cis = ((double) union_short.s) * pow(2.0,-29);
-
-		 //t_oe
-		 union_unsigned_short.c[0] = ubx_eph.SF[1].W[7].byte[1];
-		 union_unsigned_short.c[1] = ubx_eph.SF[1].W[7].byte[2];
-		 eph_data.toe = ((double) union_unsigned_short.s) * pow(2.0,4);
-	
-	} catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error parsing ephemeris data: " << e.what();
-		log_error_(output.str());
-	}
-	return (eph_data);
 
 };
