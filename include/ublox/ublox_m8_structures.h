@@ -145,7 +145,6 @@ PACK(
 });
 
 
-
 ///////////////////////////////////////////////////////////
 // UBX-CFG
 ///////////////////////////////////////////////////////////
@@ -2148,7 +2147,7 @@ PACK(
 * ID: 0x01  0x21  Payload Length= 20 bytes
 */
 PACK(
-    struct NavUTCTime{
+    struct NavTimeUTC{
         UbloxHeader header;
         uint32_t iTOW;  // GPS time of week (msec)
         uint32_t tacc;  // time accuracy measurement

@@ -60,8 +60,8 @@ typedef boost::function<void(const std::string&)> ErrorMsgCallback;
 //! ACK
 //! AID
 //! CFG
-typedef boost::function<void(CfgPrt&, double&)> PortSettingsCallback;
-typedef boost::function<void(CfgNav5&, double&)> ConfigureNavigationParametersCallback;
+typedef boost::function<void(CfgPrt&, double&)> CfgPrtCallback;
+typedef boost::function<void(CfgNav5&, double&)> CfgNav5Callback;
 //! INF
 //! LOG
 //! MON
@@ -71,13 +71,14 @@ typedef boost::function<void(NavSol&, double&)> NavSolCallback;
 typedef boost::function<void(NavStatus&, double&)> NavStatusCallback;
 typedef boost::function<void(NavVelNed&, double&)> NavVelNedCallback;
 typedef boost::function<void(NavSVInfo&, double&)> NavSVInfoCallback;
-typedef boost::function<void(NavGPSTime&, double&)> NavGPSTimeCallback;
-typedef boost::function<void(NavUTCTime&, double&)> NavUTCTimeCallback;
+typedef boost::function<void(NavTimeGPS&, double&)> NavTimeGPSCallback;
+typedef boost::function<void(NavTimeUTC&, double&)> NavTimeUTCCallback;
 typedef boost::function<void(NavDOP&, double&)> NavDOPCallback;
 typedef boost::function<void(NavDGPS&, double&)> NavDGPSCallback;
 typedef boost::function<void(NavClock&, double&)> NavClockCallback;
 //! MGA
 //! RXM
+typedef boost::function<void(RxmSvsi&, double&)> RxmSvsiCallback;
 //! TIM
 //! UPD
 
@@ -110,26 +111,29 @@ public:
      * before giving up
      * @return True if the GPS was found, false if it was not.
      */
-     bool Ping(int num_attempts=5);
+    bool Ping(int num_attempts=5);
+
+    void calculateCheckSum(uint8_t* in, size_t length, uint8_t* out);
 
     //////////////////////////////////////////////////////
     // Input Methods
     //////////////////////////////////////////////////////
     bool SendMessage(uint8_t *msg_ptr, size_t length);
 
-    void SetPortConfiguration(bool ubx_input, bool ubx_output, bool nmea_input, bool nmea_output);
-    bool ConfigureMessageRate(uint8_t class_id, uint8_t msg_id, uint8_t rate);
+    void SetCfgPrtUsb(bool ubx_input, bool ubx_output, bool nmea_input, bool nmea_output);
+    // Set a specifc message to be output periodically
+    bool SetCfgMsgRate(uint8_t class_id, uint8_t msg_id, uint8_t rate);
         // (rate) is relative to the event a message is registered on. For example,
         // if the rate of a navigation message is set to 2, the message is sent
         // every second navigation solution.
 
-    bool ConfigureNavigationParameters(uint8_t dynamic_model = 3, uint8_t fix_mode = 3);
+    bool SetCfgNav5(uint8_t dynamic_model = 3, uint8_t fix_mode = 3);
 
     //////////////////////////////////////////////////////
     // Command Methods
     //////////////////////////////////////////////////////
     bool Reset(uint16_t nav_bbr_mask, uint8_t reset_mode);
-    bool ResetToColdStart(uint8_t reset_mode);
+    bool ResetToColdStart();
     bool ResetToWarmStart();
     bool ResetToHotStart();
 
@@ -137,36 +141,45 @@ public:
     // Polling Methods
     //////////////////////////////////////////////////////
     bool PollMessage(uint8_t class_id, uint8_t msg_id);
-    void PollPortConfiguration(uint8_t port_identifier = 3);
-    bool PollNavigationParamterConfiguration();
-    bool PollSVStatus();
-    bool PollSVInfo();
+    bool PollMessageIndSV(uint8_t class_id, uint8_t msg_id, uint8_t svid);
+
+    bool PollCfgNav5();
+    void PollCfgPrt(uint8_t port_identifier = 3);
+    void PollCfgPrtCurrent();
+    void PollCfgPrtUsb();
+    
+    bool PollNavSvInfo();
     bool PollNavStatus();
+
+    bool PollRxmSvsi();
 
     //////////////////////////////////////////////////////
     // Set Callback Methods
     //////////////////////////////////////////////////////
+    void set_time_handler(GetTimeCallback callback) {time_handler_ = callback;};
+
     void set_log_info_callback(InfoMsgCallback callback){log_info_=callback;};
     void set_log_debug_callback(DebugMsgCallback callback){log_debug_=callback;};
     void set_log_warning_callback(WarningMsgCallback callback){log_warning_=callback;};
     void set_log_error_callback(ErrorMsgCallback callback){log_error_=callback;};
 
-    void set_rxm_svsi_callback(RxmSvsiCallback callback){rxm_svsi_callback_=callback;};
+    void set_cfg_nav5_callback(CfgNav5Callback callback){cfg_nav5_callback_=callback;};
+    void set_cfg_prt_callback(CfgPrtCallback callback){cfg_prt_callback_=callback;};
+
     void set_nav_status_callback(NavStatusCallback callback){nav_status_callback_=callback;};
-    void set_nav_solution_callback(NavSolCallback callback){nav_sol_callback_=callback;};
-    void set_nav_position_llh_callback(NavPosLLHCallback callback){nav_pos_llh_callback_=callback;};
+    void set_nav_sol_callback(NavSolCallback callback){nav_sol_callback_=callback;};
+    void set_nav_pos_llh_callback(NavPosLLHCallback callback){nav_pos_llh_callback_=callback;};
     void set_nav_sv_info_callback(NavSVInfoCallback callback){nav_sv_info_callback_=callback;};
-    void set_nav_gps_time_callback(NavGPSTimeCallback callback){nav_gps_time_callback_=callback;};
-    void set_nav_utc_time_callback(NavUTCTimeCallback callback){nav_utc_time_callback_=callback;};
+    void set_nav_time_gps_callback(NavTimeGPSCallback callback){nav_time_gps_callback_=callback;};
+    void set_nav_time_glo_callback(NavTimeGLOCallback callback){nav_time_glo_callback_=callback;};
+    void set_nav_time_bds_callback(NavTimeBDSCallback callback){nav_time_bds_callback_=callback;};
+    void set_nav_time_utc_callback(NavTimeUTCCallback callback){nav_time_utc_callback_=callback;};
     void set_nav_dop_callback(NavDOPCallback callback){nav_dop_callback_=callback;};
     void set_nav_dgps_callback(NavDGPSCallback callback){nav_dgps_callback_=callback;};
     void set_nav_clock_callback(NavClockCallback callback){nav_clock_callback_=callback;};
     void set_nav_vel_ned_callback(NavVelNedCallback callback){nav_vel_ned_callback_=callback;};
 
-    void set_get_time_callback(GetTimeCallback callback){time_handler_=callback;};
-    void set_time_handler(GetTimeCallback callback) {time_handler_ = callback;};
-
-    void calculateCheckSum(uint8_t* in, size_t length, uint8_t* out);
+    void set_rxm_svsi_callback(RxmSvsiCallback callback){rxm_svsi_callback_=callback;};
 
 protected:
 
@@ -191,7 +204,7 @@ protected:
 	 */
 	void ReadSerialPort();
 
-	bool WaitForAck(int timeout); //!< waits for an ack from receiver (timeout in seconds)
+	//bool WaitForAck(int timeout); //!< waits for an ack from receiver (timeout in seconds)
 
     void BufferIncomingData(uint8_t* msg, size_t length);
 
@@ -208,27 +221,32 @@ protected:
     //////////////////////////////////////////////////////
     // Callbacks
     //////////////////////////////////////////////////////
+    //HandleAcknowledgementCallback handle_acknowledgement_;
+    GetTimeCallback time_handler_; //!< Function pointer to callback function for timestamping
+
     //! Logging Callbacks
     DebugMsgCallback log_debug_;
     InfoMsgCallback log_info_;
     WarningMsgCallback log_warning_;
     ErrorMsgCallback log_error_;
-    //! Data Callbacks
-    HandleAcknowledgementCallback handle_acknowledgement_;
-    GetTimeCallback time_handler_; //!< Function pointer to callback function for timestamping
+
     //! UBX Data Callbacks
-    PortSettingsCallback port_settings_callback_;
-    ConfigureNavigationParametersCallback configure_navigation_parameters_callback_;
+    CfgPrtCallback cfg_prt_callback_;
+    CfgNav5Callback cfg_nav5_callback_;
+
     NavPosLLHCallback nav_pos_llh_callback_;
     NavSolCallback nav_sol_callback_;
     NavStatusCallback nav_status_callback_;
     NavVelNedCallback nav_vel_ned_callback_;
     NavSVInfoCallback nav_sv_info_callback_;
-    NavGPSTimeCallback nav_gps_time_callback_;
-    NavUTCTimeCallback nav_utc_time_callback_;
+    NavTimeGPSCallback nav_time_gps_callback_;
+    NavTimeGLOCallback nav_time_glo_callback_;
+    NavTimeBDSCallback nav_time_bds_callback_;
+    NavTimeUTCCallback nav_time_utc_callback_;
     NavDOPCallback nav_dop_callback_;
     NavDGPSCallback nav_dgps_callback_;
     NavClockCallback nav_clock_callback_;
+
     RxmSvsiCallback rxm_svsi_callback_;
 	
 	//////////////////////////////////////////////////////
@@ -239,10 +257,10 @@ protected:
 	size_t bytes_remaining_;	//!< bytes remaining to be read in the current message
 	size_t buffer_index_;		//!< index into data_buffer_
 	size_t header_length_;	//!< length of the current header being read
-	bool reading_acknowledgement_;	//!< true if an acknowledgement is being received
+	//bool reading_acknowledgement_;	//!< true if an acknowledgement is being received
 	double read_timestamp_; 		//!< time stamp when last serial port read completed
-	double parse_timestamp_;		//!< time stamp when last parse began
-	unsigned short msgID;
+	//double parse_timestamp_;		//!< time stamp when last parse began
+	unsigned short msgID; //TODO: check if this needs to be global or can be scoped to BufferIncomingData();
 	
     bool is_connected_; //!< indicates if a connection to the receiver has been established
 private:

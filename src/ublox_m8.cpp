@@ -18,14 +18,14 @@ inline void printHex(char *data, int length) {
  * user callback is not set.  Returns the current time from the
  * CPU clock as the number of seconds from Jan 1, 1970
  */
-double DefaultGetTime() {
+inline double DefaultGetTime() {
     boost::posix_time::ptime present_time(
             boost::posix_time::microsec_clock::universal_time());
     boost::posix_time::time_duration duration(present_time.time_of_day());
     return duration.total_seconds();
 }
 
-void DefaultAcknowledgementHandler() {
+inline void DefaultAcknowledgementHandler() {
     //std::cout << "Acknowledgment received." << std::endl;
 }
 
@@ -45,12 +45,12 @@ inline void DefaultErrorMsgCallback(const std::string &msg) {
     std::cout << "Ublox Error: " << msg << std::endl;
 }
 
-inline void DefaultPortSettingsCallback(CfgPrt port_settings,
+inline void DefaultCfgPrtCallback(ublox_m8::CfgPrt port_settings,
         double time_stamp) {
     std::cout << "CFG-PRT:" << std::endl;
 }
 
-inline void DefaultConfigureNavigationParametersCallback(CfgNav5 cfg_nav,
+inline void DefaultCfgNav5Callback(ublox_m8::CfgNav5 cfg_nav5,
         double time_stamp) {
     std::cout << "CFG-NAV5:" << std::endl;
 }
@@ -88,7 +88,7 @@ inline void DefaultNavStatusCallback(ublox_m8::NavStatus nav_status, double time
     }
 }
 
-inline void DefaultNavVelNedCallback(ublox_m8::NavVelNed nav_vel_ned, double time_stamp) {
+inline void DefaultNavVelNedCallback(ublox_m8::NavVelNED nav_vel_ned, double time_stamp) {
     std::cout << "NAV-VELNED: " << endl;
 }
 
@@ -96,14 +96,24 @@ inline void DefaultNavSVInfoCallback(ublox_m8::NavSVInfo nav_sv_info, double tim
     std::cout << "NAV-SVINFO: " << endl;
 }
 
-inline void DefaultNavGPSTimeCallback(ublox_m8::NavGPSTime nav_gps_time,
+inline void DefaultNavTimeGPSCallback(ublox_m8::NavTimeGPS nav_gps_time,
         double time_stamp) {
-    std::cout << "NAV-GPSTIME: " << endl;
+    std::cout << "NAV-TIMEGPS: " << endl;
 }
 
-inline void DefaultNavUTCTimeCallback(ublox_m8::NavUTCTime nav_utc_time,
+inline void DefaultNavTimeGLOCallback(ublox_m8::NavTimeGLO nav_glo_time,
         double time_stamp) {
-    std::cout << "NAV-UTCTIME: " << endl;
+    std::cout << "NAV-TIMEGLO: " << endl;
+}
+
+inline void DefaultNavTimeBDSCallback(ublox_m8::NavTimeBDS nav_bds_time,
+        double time_stamp) {
+    std::cout << "NAV-TIMEBDS: " << endl;
+}
+
+inline void DefaultNavTimeUTCCallback(ublox_m8::NavTimeUTC nav_utc_time,
+        double time_stamp) {
+    std::cout << "NAV-TIMEUTC: " << endl;
 }
 
 inline void DefaultNavDOPCallback(ublox_m8::NavDOP nav_dop, double time_stamp) {
@@ -126,7 +136,7 @@ inline void DefaultNavPosLlhCallback(ublox_m8::NavPosLLH nav_position, double ti
                   "  Height: " << nav_position.height << std::endl << std::endl;*/
 }
 
-inline void DefaultRxmSvsiCallback(ublox_m8::SVStatus sv_stat, double time_stamp) {
+inline void DefaultRxmSvsiCallback(ublox_m8::RxmSvsi sv_stat, double time_stamp) {
     std::cout << "RXM-SVSI: " << std::endl;
 }
 
@@ -135,31 +145,33 @@ UbloxM8::UbloxM8() {
     reading_status_ = false;
     time_handler_ = DefaultGetTime;
     handle_acknowledgement_ = DefaultAcknowledgementHandler;
-    port_settings_callback_ = DefaultPortSettingsCallback;
-    configure_navigation_parameters_callback_ = DefaultConfigureNavigationParametersCallback;
+    cfg_prt_callback_ = DefaultCfgPrtCallback;
+    cfg_nav5_callback_ = DefaultCfgNav5Callback;
     nav_pos_llh_callback_ = DefaultNavPosLlhCallback;
-    rxm_svsi_callback_ = DefaultRxmSvsiCallback;
     nav_sol_callback_ = DefaultNavSolCallback;
     nav_status_callback_ = DefaultNavStatusCallback;
     nav_vel_ned_callback_ = DefaultNavVelNedCallback;
     nav_sv_info_callback_ = DefaultNavSVInfoCallback;
-    nav_gps_time_callback_ = DefaultNavGPSTimeCallback;
-    nav_utc_time_callback_ = DefaultNavUTCTimeCallback;
+    nav_time_gps_callback_ = DefaultNavTimeGPSCallback;
+    nav_time_glo_callback_ = DefaultNavTimeGLOCallback;
+    nav_time_bds_callback_ = DefaultNavTimeBDSCallback;
+    nav_time_utc_callback_ = DefaultNavTimeUTCCallback;
     nav_dop_callback_ = DefaultNavDOPCallback;
     nav_dgps_callback_ = DefaultNavDGPSCallback;
     nav_clock_callback_ = DefaultNavClockCallback;
+    rxm_svsi_callback_ = DefaultRxmSvsiCallback;
     log_debug_ = DefaultDebugMsgCallback;
     log_info_ = DefaultInfoMsgCallback;
     log_warning_ = DefaultWarningMsgCallback;
     log_error_ = DefaultErrorMsgCallback;
-    reading_acknowledgement_ = false;
+    //reading_acknowledgement_ = false;
     bytes_remaining_ = false;
     header_length_ = 0;
     msgID = 0;
     data_read_ = NULL;
     buffer_index_ = 0;
     read_timestamp_ = 0;
-    parse_timestamp_ = 0;
+    //parse_timestamp_ = 0;
     is_connected_ = false;
 }
 
@@ -172,7 +184,6 @@ bool UbloxM8::Connect(std::string port, int baudrate) {
     serial::Timeout my_timeout(100, 1000, 0, 1000, 0);
     try {
         serial_port_ = new serial::Serial(port, baudrate, my_timeout);
-
 
 		if (!serial_port_->isOpen()) {
 			std::stringstream output;
@@ -188,30 +199,18 @@ bool UbloxM8::Connect(std::string port, int baudrate) {
 			log_info_(output.str());
 		}
 
+        //! stop any incoming data and flush buffers
 		//std::cout << "Flushing port" << std::endl;
 		serial_port_->flush();
+		
+		//! stop any incoming nmea data
+		SetCfgPrtUsb(true,true,false,false);
 
-		// stop any incoming data and flush buffers
-		// stop any incoming nmea data
-		//SetPortConfiguration(true,true,false,false);
-		// wait for data to stop cominig in
-		// boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-		// unsigned char result[5000];
-		// size_t bytes_read;
-		// bytes_read=serial_port_->read(result, 5000);
-	//    std::cout << result << std::endl;
-	//    std::cout << "flushing port" << std::endl;
+		//! wait for data to stop cominig in
+		//boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+	
 	//    // clear serial port buffers
 	//    serial_port_->flush();
-
-		// turn off NMEA messages
-		// ConfigureMessageRate(0x0F, 0x00, 0);
-		//  boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-		// bytes_read=serial_port_->read(result, 5000);
-		// std::cout << result << std::endl;
-		// std::cout << "flushing port" << std::endl;
-		// clear serial port buffers
-		//serial_port_->flush();
 
 		// look for GPS by sending ping and waiting for response
 		if (!Ping()) {
@@ -449,31 +448,13 @@ bool UbloxM8::PollMessageIndSV(uint8_t class_id, uint8_t msg_id, uint8_t svid) {
 }
 
 // (CFG-NAV5) Polls current navigation algorithms parameters
-bool UbloxM8::PollNavigationParamterConfiguration() {
+bool UbloxM8::PollCfgNav5() {
     log_info_("Polling for CFG-NAV5..");
     return PollMessage(MSG_CLASS_CFG, MSG_ID_CFG_NAV5);
 }
 
-// (RXM-SVSI) Polls for Satellite Status Info
-bool UbloxM8::PollSVStatus() {
-    log_debug_("Polling for RXM-SVSI..");
-    return PollMessage(MSG_CLASS_RXM, MSG_ID_RXM_SVSI);
-}
-
-// (NAV-SVINFO) Polls for Space Vehicle Information
-bool UbloxM8::PollSVInfo() {
-    log_debug_("Polling for NAV-SVINFO..");
-    return PollMessage(MSG_CLASS_NAV, MSG_ID_NAV_SVINFO);
-}
-
-// (NAV-STATUS) Polls for Receiver Navigation Status
-bool UbloxM8::PollNavStatus() {
-    log_debug_("Polling for Receiver NAV-STATUS..");
-    return PollMessage(MSG_CLASS_NAV, MSG_ID_NAV_STATUS);
-}
-
 // Poll Port Configuration
-void UbloxM8::PollPortConfiguration(uint8_t port_identifier)
+void UbloxM8::PollCfgPrt(uint8_t port_identifier)
 { // Port identifier = 3 for USB (default value if left blank)
   //                 = 1 or 2 for UART
     try {
@@ -498,6 +479,55 @@ void UbloxM8::PollPortConfiguration(uint8_t port_identifier)
         output << "Error polling ublox port configuration: " << e.what();
         log_error_(output.str());
     }
+}
+void UbloxM8::PollCfgPrtCurrent()
+{
+        //Polls the configuration of the port currently being used.
+        try {
+        uint8_t message[8];
+        message[0]=UBX_SYNC_BYTE_1;
+        message[1]=UBX_SYNC_BYTE_2;
+        message[2]=MSG_CLASS_CFG;
+        message[3]=MSG_ID_CFG_PRT;
+        message[4]=0; // payload length
+        message[5]=0; // payload length
+        message[6]=0;                       // Checksum A
+        message[7]=0;                       // Checksum B
+
+        unsigned char* msg_ptr = (unsigned char*)&message;
+        calculateCheckSum(msg_ptr+2,4,msg_ptr+6);
+
+        serial_port_->write(msg_ptr, sizeof(message));
+        log_info_("Polling for Current Port Configuration.");
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error in UbloxM8::PollCfgPrtCurrent(): " << e.what();
+        log_error_(output.str());
+    }
+}
+
+void UbloxM8::PollCfgPrtUsb()
+{
+    //Polls the configuration of the USB port, no matter what port is currently being used.
+    PollCfgPrt(3);
+}
+
+// (NAV-SVINFO) Polls for Space Vehicle Information
+bool UbloxM8::PollNavSvInfo() {
+    log_debug_("Polling for NAV-SVINFO..");
+    return PollMessage(MSG_CLASS_NAV, MSG_ID_NAV_SVINFO);
+}
+
+// (NAV-STATUS) Polls for Receiver Navigation Status
+bool UbloxM8::PollNavStatus() {
+    log_debug_("Polling for Receiver NAV-STATUS..");
+    return PollMessage(MSG_CLASS_NAV, MSG_ID_NAV_STATUS);
+}
+
+// (RXM-SVSI) Polls for Satellite Status Info
+bool UbloxM8::PollRxmSvsi() {
+    log_debug_("Polling for RXM-SVSI..");
+    return PollMessage(MSG_CLASS_RXM, MSG_ID_RXM_SVSI);
 }
 
 ////////////////////////////////////////////////////////
@@ -547,9 +577,9 @@ bool UbloxM8::Reset(uint16_t nav_bbr_mask, uint8_t reset_mode) {
 }
 
 // Receiver Reset Messages - Force Cold Start
-bool UbloxM8::ResetToColdStart(uint8_t reset_mode) {
+bool UbloxM8::ResetToColdStart() {
     log_info_("Receiver reset to cold start state.");
-    return Reset(0xFFFF, reset_mode);
+    return Reset(0xFFFF, 0x02);
 }
 
 // Receiver Reset Messages - Force Warm Start
@@ -568,8 +598,42 @@ bool UbloxM8::ResetToHotStart() {
 // INPUT METHODS
 ////////////////////////////////////////////////////////
 
+// Send Message
+bool UbloxM8::SendMessage(uint8_t* msg_ptr, size_t length)
+{
+    try {
+        stringstream output1;
+        //std::cout << length << std::endl;
+        //std::cout << "Message Pointer" << endl;
+        //printHex((char*) msg_ptr, length);
+        size_t bytes_written;
+
+        if ((serial_port_!=NULL)&&(serial_port_->isOpen())) {
+          bytes_written=serial_port_->write(msg_ptr, length);
+        } else {
+            log_error_("Unable to send message. Serial port not open.");
+            return false;
+        }
+        // check that full message was sent to serial port
+        if (bytes_written == length) {
+            return true;
+        }
+        else {
+            log_error_("Full message was not sent over serial port.");
+            output1 << "Attempted to send " << length << "bytes. " << bytes_written << " bytes sent.";
+            log_error_(output1.str());
+            return false;
+        }
+    } catch (std::exception &e) {
+        std::stringstream output;
+        output << "Error sending ublox message: " << e.what();
+        log_error_(output.str());
+        return false;
+    }
+}
+
 // (CFG-NAV5) Cofigure Navigation Algorithm Parameters
-bool UbloxM8::ConfigureNavigationParameters(uint8_t dynamic_model, uint8_t fix_mode){
+bool UbloxM8::SetCfgNav5(uint8_t dynamic_model, uint8_t fix_mode){
 	try {
         ublox_m8::CfgNav5 message;
 
@@ -609,10 +673,9 @@ bool UbloxM8::ConfigureNavigationParameters(uint8_t dynamic_model, uint8_t fix_m
 }
 
 // (CFG-MSG) Set message output rate for specified message
-bool UbloxM8::ConfigureMessageRate(uint8_t class_id, uint8_t msg_id,
-        uint8_t rate) {
+bool UbloxM8::SetCfgMsgRate(uint8_t class_id, uint8_t msg_id, uint8_t rate) {
 	try {
-        ublox_m8::CfgMsgRate message;
+        ublox_m8::CfgMsg message;
 		message.header.sync1 = UBX_SYNC_BYTE_1;
 		message.header.sync2 = UBX_SYNC_BYTE_2;
 		message.header.message_class = MSG_CLASS_CFG;
@@ -636,7 +699,7 @@ bool UbloxM8::ConfigureMessageRate(uint8_t class_id, uint8_t msg_id,
 }
 
 // Set Port Configuration
-void UbloxM8::SetPortConfiguration(bool ubx_input, bool ubx_output,
+void UbloxM8::SetCfgPrtUsb(bool ubx_input, bool ubx_output,
         bool nmea_input, bool nmea_output) {
 	try {
         ublox_m8::CfgPrt message;
@@ -689,40 +752,6 @@ void UbloxM8::SetPortConfiguration(bool ubx_input, bool ubx_output,
 		std::stringstream output;
 		output << "Error configuring ublox port: " << e.what();
 		log_error_(output.str());
-	}
-}
-
-// Send Message
-bool UbloxM8::SendMessage(uint8_t* msg_ptr, size_t length)
-{
-	try {
-		stringstream output1;
-		//std::cout << length << std::endl;
-		//std::cout << "Message Pointer" << endl;
-		//printHex((char*) msg_ptr, length);
-        size_t bytes_written;
-
-        if ((serial_port_!=NULL)&&(serial_port_->isOpen())) {
-		  bytes_written=serial_port_->write(msg_ptr, length);
-        } else {
-            log_error_("Unable to send message. Serial port not open.");
-            return false;
-        }
-		// check that full message was sent to serial port
-		if (bytes_written == length) {
-			return true;
-		}
-		else {
-			log_error_("Full message was not sent over serial port.");
-			output1 << "Attempted to send " << length << "bytes. " << bytes_written << " bytes sent.";
-			log_error_(output1.str());
-			return false;
-		}
-	} catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error sending ublox message: " << e.what();
-		log_error_(output.str());
-		return false;
 	}
 }
 
@@ -862,8 +891,8 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_port_settings, log, payload_length+HDR_CHKSM_LENGTH);
 			//printHex((char*) &cur_port_settings, sizeof(cur_port_settings));
-			if (port_settings_callback_)
-				port_settings_callback_(cur_port_settings, read_timestamp_);
+			if (cfg_prt_callback_)
+				cfg_prt_callback_(cur_port_settings, read_timestamp_);
 			break;
 
 		case CFG_NAV5:
@@ -871,8 +900,8 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav5_settings, log, payload_length+HDR_CHKSM_LENGTH);
 			//printHex((char*) &cur_port_settings, sizeof(cur_port_settings));
-			if (configure_navigation_parameters_callback_)
-				configure_navigation_parameters_callback_(cur_nav5_settings, read_timestamp_);
+			if (cfg_nav5_callback_)
+				cfg_nav5_callback_(cur_nav5_settings, read_timestamp_);
 			break;
 
 		case NAV_STATUS:
@@ -892,7 +921,7 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_VELNED:
-            ublox_m8::NavVelNed cur_nav_vel_ned;
+            ublox_m8::NavVelNED cur_nav_vel_ned;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_vel_ned, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_vel_ned_callback_)
@@ -933,8 +962,8 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 				nav_sv_info_callback_(cur_nav_svinfo, read_timestamp_);
 			break;
 
-		case NAV_GPSTIME:
-            ublox_m8::NavGPSTime cur_nav_gps_time;
+		case NAV_TIMEGPS:
+            ublox_m8::NavTimeGPS cur_nav_gps_time;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_gps_time, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_gps_time_callback_)
@@ -942,7 +971,7 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		case NAV_UTCTIME:
-            ublox_m8::NavUTCTime cur_nav_utc_time;
+            ublox_m8::NavTimeUTC cur_nav_utc_time;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_utc_time, log, payload_length+HDR_CHKSM_LENGTH);
 			if (nav_utc_time_callback_)
