@@ -372,7 +372,6 @@ void UbloxM8::ReadSerialPort() {
         // add data to the buffer to be parsed
         BufferIncomingData(buffer, len);
     }
-
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -886,7 +885,7 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 
 		switch (logID) {
 
-		case message_id.CFG_PRT:
+		case CFG_PRT:
             ublox_m8::CfgPrt cur_port_settings;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_port_settings, log, payload_length+HDR_CHKSM_LENGTH);
@@ -994,7 +993,7 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 				nav_dgps_callback_(cur_nav_dgps, read_timestamp_);
 			break;
 
-		case NAV_CLK:
+		case NAV_CLOCK:
             ublox_m8::NavClock cur_nav_clock;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_clock, log, payload_length+HDR_CHKSM_LENGTH);
@@ -1067,5 +1066,3 @@ void UbloxM8::calculateCheckSum(uint8_t* in, size_t length, uint8_t* out) {
 		log_error_(output.str());
 	}
 }
-
-};

@@ -268,7 +268,6 @@ protected:
 private:
     //! Function to parse logs into a usable structure
     void ParseLog(uint8_t* log, size_t logID);
-    UbxMessageId message_id;
 
 };
 }
