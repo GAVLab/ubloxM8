@@ -84,7 +84,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 set(UBLOX_SRCS src/ublox_m8.cpp)
 # Add default header files
 set(UBLOX_HEADERS include/ublox/ublox_m8.h
-                  include/ublox/ublox_M8_structures.h)
+                  include/ublox/ublox_m8_structures.h)
 
 # Find Boost, if it hasn't already been found
 #set(Boost_USE_STATIC_LIBS ON)

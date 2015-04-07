@@ -1,5 +1,5 @@
 /*!
- * \file ublox/ublox.h
+ * \file ublox/ublox_m8.h
  * \author  Chris Collins <cnc0003@tigermail.auburn.edu>
  * \author  Chris Gaddes <cag0023@tigermail.auburn.edu>
  * \version 0.1
@@ -69,9 +69,11 @@ typedef boost::function<void(CfgNav5&, double&)> CfgNav5Callback;
 typedef boost::function<void(NavPosLLH&, double&)> NavPosLLHCallback;
 typedef boost::function<void(NavSol&, double&)> NavSolCallback;
 typedef boost::function<void(NavStatus&, double&)> NavStatusCallback;
-typedef boost::function<void(NavVelNed&, double&)> NavVelNedCallback;
+typedef boost::function<void(NavVelNED&, double&)> NavVelNEDCallback;
 typedef boost::function<void(NavSVInfo&, double&)> NavSVInfoCallback;
 typedef boost::function<void(NavTimeGPS&, double&)> NavTimeGPSCallback;
+typedef boost::function<void(NavTimeGLO&, double&)> NavTimeGLOCallback;
+typedef boost::function<void(NavTimeBDS&, double&)> NavTimeBDSCallback;
 typedef boost::function<void(NavTimeUTC&, double&)> NavTimeUTCCallback;
 typedef boost::function<void(NavDOP&, double&)> NavDOPCallback;
 typedef boost::function<void(NavDGPS&, double&)> NavDGPSCallback;
@@ -177,7 +179,7 @@ public:
     void set_nav_dop_callback(NavDOPCallback callback){nav_dop_callback_=callback;};
     void set_nav_dgps_callback(NavDGPSCallback callback){nav_dgps_callback_=callback;};
     void set_nav_clock_callback(NavClockCallback callback){nav_clock_callback_=callback;};
-    void set_nav_vel_ned_callback(NavVelNedCallback callback){nav_vel_ned_callback_=callback;};
+    void set_nav_vel_ned_callback(NavVelNEDCallback callback){nav_vel_ned_callback_=callback;};
 
     void set_rxm_svsi_callback(RxmSvsiCallback callback){rxm_svsi_callback_=callback;};
 
@@ -237,7 +239,7 @@ protected:
     NavPosLLHCallback nav_pos_llh_callback_;
     NavSolCallback nav_sol_callback_;
     NavStatusCallback nav_status_callback_;
-    NavVelNedCallback nav_vel_ned_callback_;
+    NavVelNEDCallback nav_vel_ned_callback_;
     NavSVInfoCallback nav_sv_info_callback_;
     NavTimeGPSCallback nav_time_gps_callback_;
     NavTimeGLOCallback nav_time_glo_callback_;

@@ -1,4 +1,4 @@
-#include "ublox/ublox.h"
+#include "ublox/ublox_m8.h"
 #include <iostream>
 
 using namespace std;
@@ -25,9 +25,9 @@ inline double DefaultGetTime() {
     return duration.total_seconds();
 }
 
-inline void DefaultAcknowledgementHandler() {
-    //std::cout << "Acknowledgment received." << std::endl;
-}
+// inline void DefaultAcknowledgementHandler() {
+//     //std::cout << "Acknowledgment received." << std::endl;
+// }
 
 inline void DefaultDebugMsgCallback(const std::string &msg) {
     std::cout << "Ublox Debug: " << msg << std::endl;
@@ -88,7 +88,7 @@ inline void DefaultNavStatusCallback(ublox_m8::NavStatus nav_status, double time
     }
 }
 
-inline void DefaultNavVelNedCallback(ublox_m8::NavVelNED nav_vel_ned, double time_stamp) {
+inline void DefaultNavVelNEDCallback(ublox_m8::NavVelNED nav_vel_ned, double time_stamp) {
     std::cout << "NAV-VELNED: " << endl;
 }
 
@@ -144,13 +144,13 @@ UbloxM8::UbloxM8() {
     serial_port_ = NULL;
     reading_status_ = false;
     time_handler_ = DefaultGetTime;
-    handle_acknowledgement_ = DefaultAcknowledgementHandler;
+    //handle_acknowledgement_ = DefaultAcknowledgementHandler;
     cfg_prt_callback_ = DefaultCfgPrtCallback;
     cfg_nav5_callback_ = DefaultCfgNav5Callback;
     nav_pos_llh_callback_ = DefaultNavPosLlhCallback;
     nav_sol_callback_ = DefaultNavSolCallback;
     nav_status_callback_ = DefaultNavStatusCallback;
-    nav_vel_ned_callback_ = DefaultNavVelNedCallback;
+    nav_vel_ned_callback_ = DefaultNavVelNEDCallback;
     nav_sv_info_callback_ = DefaultNavSVInfoCallback;
     nav_time_gps_callback_ = DefaultNavTimeGPSCallback;
     nav_time_glo_callback_ = DefaultNavTimeGLOCallback;
@@ -882,11 +882,11 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 		uint16_t payload_length;
 		uint8_t num_of_svs;
 		uint8_t num_of_channels;
-        ublox_m8::UbxMessageId message_id;
+        
 
 		switch (logID) {
 
-		case CFG_PRT:
+		case message_id.CFG_PRT:
             ublox_m8::CfgPrt cur_port_settings;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_port_settings, log, payload_length+HDR_CHKSM_LENGTH);
@@ -966,16 +966,16 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
             ublox_m8::NavTimeGPS cur_nav_gps_time;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_gps_time, log, payload_length+HDR_CHKSM_LENGTH);
-			if (nav_gps_time_callback_)
-				nav_gps_time_callback_(cur_nav_gps_time, read_timestamp_);
+			if (nav_time_gps_callback_)
+				nav_time_gps_callback_(cur_nav_gps_time, read_timestamp_);
 			break;
 
 		case NAV_UTCTIME:
             ublox_m8::NavTimeUTC cur_nav_utc_time;
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			memcpy(&cur_nav_utc_time, log, payload_length+HDR_CHKSM_LENGTH);
-			if (nav_utc_time_callback_)
-				nav_utc_time_callback_(cur_nav_utc_time, read_timestamp_);
+			if (nav_time_utc_callback_)
+				nav_time_utc_callback_(cur_nav_utc_time, read_timestamp_);
 			break;
 
 		case NAV_DOP:
@@ -1004,7 +1004,7 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 
         case RXM_SVSI:
 			// NOTE: needs to be checked!!
-            ublox_m8::SVStatus cur_sv_status;
+            ublox_m8::RxmSvsi cur_sv_status;
 
 			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
 			num_of_svs = (uint8_t) *(log+13);
@@ -1023,7 +1023,7 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 			memcpy(&cur_sv_status, log, 6 + 8);
 			// Copy repeated block
 			for (uint8_t index = 0; index < num_of_svs; index++) {
-				memcpy(&cur_sv_status.svstatusreap[index],log+14+(index*6),6);
+				memcpy(&cur_sv_status.repeated_block[index],log+14+(index*6),6);
 			}
 			// Copy Checksum
 			memcpy(&cur_sv_status.checksum, log+14+(6*num_of_svs), 2);
