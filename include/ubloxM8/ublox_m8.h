@@ -1,5 +1,5 @@
 /*!
- * \file ublox/ublox_m8.h
+ * \file ubloxM8/ublox_m8.h
  * \author  Chris Collins <cnc0003@tigermail.auburn.edu>
  * \author  Chris Gaddes <cag0023@tigermail.auburn.edu>
  * \version 0.1

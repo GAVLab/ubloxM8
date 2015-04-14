@@ -68,9 +68,9 @@ else(BUILD_WITH_ROS)
 
   if(serial_FOUND)
     include_directories(${serial_INCLUDE_DIRS})
-    list(APPEND UBLOX_LINK_LIBS ${serial_LIBRARIES})
+    list(APPEND UBLOXM8_LINK_LIBS ${serial_LIBRARIES})
     if(UNIX AND NOT APPLE)
-        list(APPEND UBLOX_LINK_LIBS rt)
+        list(APPEND UBLOXM8_LINK_LIBS rt)
     endif(UNIX AND NOT APPLE)
   else(serial_FOUND)
     message(FATAL_ERROR "Serial library was not found.")
@@ -81,10 +81,10 @@ endif(BUILD_WITH_ROS)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # Add default source files
-set(UBLOX_SRCS src/ublox_m8.cpp)
+set(UBLOXM8_SRCS src/ublox_m8.cpp)
 # Add default header files
-set(UBLOX_HEADERS include/ublox/ublox_m8.h
-                  include/ublox/ublox_m8_structures.h)
+set(UBLOXM8_HEADERS include/ubloxM8/ublox_m8.h
+                  include/ubloxM8/ublox_m8_structures.h)
 
 # Find Boost, if it hasn't already been found
 #set(Boost_USE_STATIC_LIBS ON)
@@ -93,66 +93,66 @@ find_package(Boost COMPONENTS thread system REQUIRED)
 link_directories(${Boost_LIBRARY_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 
-list(APPEND UBLOX_LINK_LIBS ${Boost_SYSTEM_LIBRARY}
-                           ${Boost_THREAD_LIBRARY})
+list(APPEND UBLOXM8_LINK_LIBS ${Boost_SYSTEM_LIBRARY}
+                              ${Boost_THREAD_LIBRARY})
 
-## Build the ublox Library
+## Build the ubloxM8 Library
 
 # Compile the Library
 if(BUILD_WITH_ROS)
-    rosbuild_add_library(ublox ${UBLOX_SRCS} ${UBLOX_HEADERS})
+    rosbuild_add_library(ubloxM8 ${UBLOXM8_SRCS} ${UBLOXM8_HEADERS})
 else(BUILD_WITH_ROS)
-    add_library(ublox ${UBLOX_SRCS} ${UBLOX_HEADERS})
+    add_library(ubloxM8 ${UBLOXM8_SRCS} ${UBLOXM8_HEADERS})
 endif(BUILD_WITH_ROS)
-target_link_libraries(ublox ${UBLOX_LINK_LIBS})
+target_link_libraries(ubloxM8 ${UBLOXM8_LINK_LIBS})
 
 ## Build the ROS wrapper
 
 if(BUILD_WITH_ROS)
-  rosbuild_add_executable(ublox_node src/ublox_node.cc)
-  target_link_libraries(ublox_node ublox)
+  rosbuild_add_executable(ubloxM8_node src/ubloxM8_node.cc)
+  target_link_libraries(ubloxM8_node ubloxM8)
 endif(BUILD_WITH_ROS)
 
 ## Build Examples
 # If asked to
-option(UBLOX_BUILD_EXAMPLES "Build uBlox examples?" OFF)
-IF(UBLOX_BUILD_EXAMPLES)
-    # Compile the ublox Test program
-    add_executable(ublox_example examples/ublox_example.cpp)
+option(UBLOXM8_BUILD_EXAMPLES "Build uBlox examples?" OFF)
+IF(UBLOXM8_BUILD_EXAMPLES)
+    # Compile the ubloxM8 Test program
+    add_executable(ubloxM8_example examples/ubloxM8_example.cpp)
     # Link the Test program to the ublox library
-    target_link_libraries(ublox_example ublox ${UBLOX_LINK_LIBS})
-ENDIF(UBLOX_BUILD_EXAMPLES)
+    target_link_libraries(ubloxM8_example ubloxM8 ${UBLOXM8_LINK_LIBS})
+ENDIF(UBLOXM8_BUILD_EXAMPLES)
 
 ## Build tests
 
 # If asked to
-IF(UBLOX_BUILD_TESTS)
+IF(UBLOXM8_BUILD_TESTS)
     
-ENDIF(UBLOX_BUILD_TESTS)
+ENDIF(UBLOXM8_BUILD_TESTS)
 
 ## Setup install and uninstall
 
 # Unless asked not to...
-IF(NOT UBLOX_DONT_CONFIGURE_INSTALL AND NOT BUILD_WITH_ROS)
+IF(NOT UBLOXM8_DONT_CONFIGURE_INSTALL AND NOT BUILD_WITH_ROS)
   # Configure make install
   IF(NOT CMAKE_INSTALL_PREFIX)
       SET(CMAKE_INSTALL_PREFIX /usr/local)
   ENDIF(NOT CMAKE_INSTALL_PREFIX)
   
-  INSTALL(TARGETS ublox
+  INSTALL(TARGETS ubloxM8
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
   )
   
-  INSTALL(FILES include/ublox/ublox_m8.h include/ublox/ublox_m8_structures.h
-          DESTINATION include/ublox)
+  INSTALL(FILES include/ubloxM8/ublox_m8.h include/ubloxM8/ublox_m8_structures.h
+          DESTINATION include/ubloxM8)
   
   IF(NOT CMAKE_FIND_INSTALL_PATH)
       set(CMAKE_FIND_INSTALL_PATH ${CMAKE_ROOT})
   ENDIF(NOT CMAKE_FIND_INSTALL_PATH)
   
-  INSTALL(FILES Findubloxm8.cmake DESTINATION ${CMAKE_FIND_INSTALL_PATH}/Modules/)
+  INSTALL(FILES FindubloxM8.cmake DESTINATION ${CMAKE_FIND_INSTALL_PATH}/Modules/)
   
   ADD_CUSTOM_TARGET(uninstall @echo uninstall package)
   
@@ -169,4 +169,4 @@ IF(NOT UBLOX_DONT_CONFIGURE_INSTALL AND NOT BUILD_WITH_ROS)
       TARGET  uninstall
     )
   ENDIF(UNIX)
-ENDIF(NOT UBLOX_DONT_CONFIGURE_INSTALL AND NOT BUILD_WITH_ROS)
+ENDIF(NOT UBLOXM8_DONT_CONFIGURE_INSTALL AND NOT BUILD_WITH_ROS)

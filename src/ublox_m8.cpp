@@ -1,4 +1,4 @@
-#include "ublox/ublox_m8.h"
+#include "ubloxM8/ublox_m8.h"
 #include <iostream>
 
 using namespace std;
