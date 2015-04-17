@@ -143,6 +143,7 @@ inline void DefaultRxmSvsiCallback(ublox_m8::RxmSvsi sv_stat, double time_stamp)
 UbloxM8::UbloxM8() {
     serial_port_ = NULL;
     reading_status_ = false;
+    parse_log_callback_ = NULL;
     time_handler_ = DefaultGetTime;
     //handle_acknowledgement_ = DefaultAcknowledgementHandler;
     cfg_prt_callback_ = DefaultCfgPrtCallback;
@@ -1038,6 +1039,15 @@ void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
 			break;
 
 		} // end switch (logID)
+
+        /*
+         * For M8L CONFIDENTIAL INTERFACE
+         * If message isn't found in standard M8 protocol, it's passed to the M8L
+         * interface ParseLog.
+         */
+        if(parse_log_callback_)
+            parse_log_callback_(log, logID);
+
 	} catch (std::exception &e) {
 		std::stringstream output;
 		output << "Error parsing ublox log: " << e.what();

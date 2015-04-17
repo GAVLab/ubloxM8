@@ -84,6 +84,9 @@ typedef boost::function<void(RxmSvsi&, double&)> RxmSvsiCallback;
 //! TIM
 //! UPD
 
+//! ParseLog callback
+typedef boost::function<void(uint8_t*, size_t)> ParseLogCallback;
+
 class UbloxM8
 {
 public:
@@ -183,6 +186,8 @@ public:
 
     void set_rxm_svsi_callback(RxmSvsiCallback callback){rxm_svsi_callback_=callback;};
 
+    void set_parse_log_callback(ParseLogCallback callback){parse_log_callback_=callback;};    
+    
 protected:
 
 	/*!
@@ -251,6 +256,7 @@ protected:
 
     RxmSvsiCallback rxm_svsi_callback_;
 	
+    ParseLogCallback parse_log_callback_;
 	//////////////////////////////////////////////////////
 	// Incoming data buffers
 	//////////////////////////////////////////////////////
