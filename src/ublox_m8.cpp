@@ -167,9 +167,9 @@ UbloxM8::UbloxM8() {
     log_error_ = DefaultErrorMsgCallback;
     //reading_acknowledgement_ = false;
     bytes_remaining_ = false;
-    header_length_ = 0;
-    msgID = 0;
-    data_read_ = NULL;
+    // header_length_ = 0;
+    // msgID = 0;
+    // data_read_ = NULL;
     buffer_index_ = 0;
     read_timestamp_ = 0;
     //parse_timestamp_ = 0;
@@ -766,7 +766,8 @@ void UbloxM8::BufferIncomingData(uint8_t *msg, size_t length) {
 
     //printHex(reinterpret_cast<char*>(msg),length);
 	try {
-
+        unsigned short msgID = 0;
+        
 		for (unsigned int i = 0; i < length; i++) {
 			//cout << i << ": " << hex << (int)msg[i] << dec << endl;
 			// make sure buffer_index_ is not larger than buffer

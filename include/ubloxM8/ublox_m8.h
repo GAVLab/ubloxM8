@@ -190,31 +190,6 @@ public:
     
 protected:
 
-	/*!
-	 * Starts a thread to continuously read from the serial port.
-	 *
-	 * Starts a thread that runs 'ReadSerialPort' which constatly reads
-	 * from the serial port.  When valid data is received, parse and then
-	 *  the data callback functions are called.
-	 */
-	void StartReading();
-
-	/*!
-	 * Starts the thread that reads from the serial port
-	 */
-	void StopReading();
-
-	/*!
-	 * Method run in a seperate thread that continuously reads from the
-	 * serial port.  When a complete packet is received, the parse
-	 * method is called to process the data
-	 */
-	void ReadSerialPort();
-
-	//bool WaitForAck(int timeout); //!< waits for an ack from receiver (timeout in seconds)
-
-    void BufferIncomingData(uint8_t* msg, size_t length);
-
     //////////////////////////////////////////////////////
     // Serial port reading members
     //////////////////////////////////////////////////////
@@ -224,8 +199,43 @@ protected:
 	boost::shared_ptr<boost::thread> read_thread_ptr_;
 	bool reading_status_;  //!< True if the read thread is running, false otherwise.
 
+	// size_t header_length_;	//!< length of the current header being read
+	//bool reading_acknowledgement_;	//!< true if an acknowledgement is being received
+	double read_timestamp_; 		//!< time stamp when last serial port read completed
+	//double parse_timestamp_;		//!< time stamp when last parse began
+	// unsigned short msgID; //TODO: check if this needs to be global or can be scoped to BufferIncomingData();
+    
+private:
 
-    //////////////////////////////////////////////////////
+    /*!
+     * Starts a thread to continuously read from the serial port.
+     *
+     * Starts a thread that runs 'ReadSerialPort' which constatly reads
+     * from the serial port.  When valid data is received, parse and then
+     *  the data callback functions are called.
+     */
+    void StartReading();
+
+    /*!
+     * Starts the thread that reads from the serial port
+     */
+    void StopReading();
+
+    /*!
+     * Method run in a seperate thread that continuously reads from the
+     * serial port.  When a complete packet is received, the parse
+     * method is called to process the data
+     */
+    void ReadSerialPort();
+
+    //bool WaitForAck(int timeout); //!< waits for an ack from receiver (timeout in seconds)
+
+    void BufferIncomingData(uint8_t* msg, size_t length);
+
+    //! Function to parse logs into a usable structure
+    void ParseLog(uint8_t* log, size_t logID);
+
+        //////////////////////////////////////////////////////
     // Callbacks
     //////////////////////////////////////////////////////
     //HandleAcknowledgementCallback handle_acknowledgement_;
@@ -255,26 +265,19 @@ protected:
     NavClockCallback nav_clock_callback_;
 
     RxmSvsiCallback rxm_svsi_callback_;
-	
+    
     ParseLogCallback parse_log_callback_;
-	//////////////////////////////////////////////////////
-	// Incoming data buffers
-	//////////////////////////////////////////////////////
-	unsigned char data_buffer_[MAX_NOUT_SIZE];	//!< data currently being buffered to read
-	unsigned char* data_read_;		//!< used only in BufferIncomingData - declared here for speed
-	size_t bytes_remaining_;	//!< bytes remaining to be read in the current message
-	size_t buffer_index_;		//!< index into data_buffer_
-	size_t header_length_;	//!< length of the current header being read
-	//bool reading_acknowledgement_;	//!< true if an acknowledgement is being received
-	double read_timestamp_; 		//!< time stamp when last serial port read completed
-	//double parse_timestamp_;		//!< time stamp when last parse began
-	unsigned short msgID; //TODO: check if this needs to be global or can be scoped to BufferIncomingData();
-	
-    bool is_connected_; //!< indicates if a connection to the receiver has been established
-private:
-    //! Function to parse logs into a usable structure
-    void ParseLog(uint8_t* log, size_t logID);
 
+
+    //////////////////////////////////////////////////////
+    // Incoming data buffers
+    //////////////////////////////////////////////////////
+    unsigned char data_buffer_[MAX_NOUT_SIZE];  //!< data currently being buffered to read
+    // unsigned char* data_read_;       //!< used only in BufferIncomingData - declared here for speed
+
+    bool is_connected_; //!< indicates if a connection to the receiver has been established
+    size_t bytes_remaining_;    //!< bytes remaining to be read in the current message
+    size_t buffer_index_;       //!< index into data_buffer_
 };
 }
 
