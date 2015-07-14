@@ -98,7 +98,7 @@ namespace ublox_m8 {
     #define MSG_ID_NAV_AOPSTATUS 0x60
     #define MSG_ID_NAV_CLOCK 0x22
     #define MSG_ID_NAV_DGPS 0x31
-    #define MSG_ID_NAV_DOP 0x31
+    #define MSG_ID_NAV_DOP 0x04
     #define MSG_ID_NAV_ODO 0x09
     #define MSG_ID_NAV_ORB 0x34
     #define MSG_ID_NAV_POSECEF 0x01
