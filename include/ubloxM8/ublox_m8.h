@@ -34,6 +34,20 @@
  * the UBX protocol.
  */
 
+/*
+* Copyright (C) 2016 Swift Navigation Inc.
+* Contact: Pasi Miettinen <pasi.miettinen@exafore.com>
+*
+* This source is subject to the license found in the file 'LICENSE'
+* which must be be distributed together with this source. All other
+* rights reserved.
+*
+* THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+* KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR
+* PURPOSE.
+*/
+
 #ifndef UBLOXM8_H
 #define UBLOXM8_H
 
@@ -43,7 +57,6 @@
 
 #include <boost/function.hpp>
 #include <boost/thread.hpp>
-//#include <boost/bind.hpp>
 
 namespace ublox_m8 {
 
@@ -66,9 +79,11 @@ typedef boost::function<void(CfgNav5&, double&)> CfgNav5Callback;
 //! LOG
 //! MON
 //! NAV
+typedef boost::function<void(NavPosECEF&, double&)> NavPosECEFCallback;
 typedef boost::function<void(NavPosLLH&, double&)> NavPosLLHCallback;
 typedef boost::function<void(NavSol&, double&)> NavSolCallback;
 typedef boost::function<void(NavStatus&, double&)> NavStatusCallback;
+typedef boost::function<void(NavVelECEF&, double&)> NavVelECEFCallback;
 typedef boost::function<void(NavVelNED&, double&)> NavVelNEDCallback;
 typedef boost::function<void(NavSVInfo&, double&)> NavSVInfoCallback;
 typedef boost::function<void(NavTimeGPS&, double&)> NavTimeGPSCallback;
@@ -80,6 +95,8 @@ typedef boost::function<void(NavDGPS&, double&)> NavDGPSCallback;
 typedef boost::function<void(NavClock&, double&)> NavClockCallback;
 //! MGA
 //! RXM
+typedef boost::function<void(RxmRawX&, double&)> RxmRawXCallback;
+typedef boost::function<void(RxmSfrbX&, double&)> RxmSfrbXCallback;
 typedef boost::function<void(RxmSvsi&, double&)> RxmSvsiCallback;
 //! TIM
 //! UPD
@@ -90,16 +107,16 @@ typedef boost::function<void(uint8_t*, size_t)> ParseLogCallback;
 class UbloxM8
 {
 public:
-	UbloxM8();
-	~UbloxM8();
+    UbloxM8();
+    ~UbloxM8();
 
-	/*!
-	 * Connects to the uBlox receiver given a serial port.
-	 *
-	 * @param port Defines which serial port to connect to in serial mode.
-	 * Examples: Linux - "/dev/ttyS0" Windows - "COM1"
-	 */
-	bool Connect(std::string port, int baudrate=115200);
+    /*!
+     * Connects to the uBlox receiver given a serial port.
+     *
+     * @param port Defines which serial port to connect to in serial mode.
+     * Examples: Linux - "/dev/ttyS0" Windows - "COM1"
+     */
+    bool Connect(std::string port, int baudrate=115200);
 
     /*!
      * Disconnects from the serial port
@@ -108,6 +125,9 @@ public:
 
     //! Indicates if a connection to the receiver has been established.
     bool IsConnected() {return is_connected_;}
+
+    void ReadFile(std::string name);
+    void ReadFromFile(unsigned char* buffer, unsigned int length);
 
     /*!
      * Pings the GPS to determine if it is properly connected
@@ -120,6 +140,8 @@ public:
 
     void calculateCheckSum(uint8_t* in, size_t length, uint8_t* out);
 
+    bool CreateRawLog(std::string &name);
+
     //////////////////////////////////////////////////////
     // Input Methods
     //////////////////////////////////////////////////////
@@ -128,9 +150,9 @@ public:
     void SetCfgPrtUsb(bool ubx_input, bool ubx_output, bool nmea_input, bool nmea_output);
     // Set a specifc message to be output periodically
     bool SetCfgMsgRate(uint8_t class_id, uint8_t msg_id, uint8_t rate);
-        // (rate) is relative to the event a message is registered on. For example,
-        // if the rate of a navigation message is set to 2, the message is sent
-        // every second navigation solution.
+    // (rate) is relative to the event a message is registered on. For example,
+    // if the rate of a navigation message is set to 2, the message is sent
+    // every second navigation solution.
 
     bool SetCfgNav5(uint8_t dynamic_model = 3, uint8_t fix_mode = 3);
 
@@ -173,6 +195,7 @@ public:
 
     void set_nav_status_callback(NavStatusCallback callback){nav_status_callback_=callback;};
     void set_nav_sol_callback(NavSolCallback callback){nav_sol_callback_=callback;};
+    void set_nav_pos_ecef_callback(NavPosECEFCallback callback){nav_pos_ecef_callback_=callback;};
     void set_nav_pos_llh_callback(NavPosLLHCallback callback){nav_pos_llh_callback_=callback;};
     void set_nav_sv_info_callback(NavSVInfoCallback callback){nav_sv_info_callback_=callback;};
     void set_nav_time_gps_callback(NavTimeGPSCallback callback){nav_time_gps_callback_=callback;};
@@ -182,8 +205,11 @@ public:
     void set_nav_dop_callback(NavDOPCallback callback){nav_dop_callback_=callback;};
     void set_nav_dgps_callback(NavDGPSCallback callback){nav_dgps_callback_=callback;};
     void set_nav_clock_callback(NavClockCallback callback){nav_clock_callback_=callback;};
+    void set_nav_vel_ecef_callback(NavVelECEFCallback callback){nav_vel_ecef_callback_=callback;};
     void set_nav_vel_ned_callback(NavVelNEDCallback callback){nav_vel_ned_callback_=callback;};
 
+    void set_rxm_rawx_callback(RxmRawXCallback callback){rxm_rawx_callback_=callback;};
+    void set_rxm_sfrbx_callback(RxmSfrbXCallback callback){rxm_sfrbx_callback_=callback;};
     void set_rxm_svsi_callback(RxmSvsiCallback callback){rxm_svsi_callback_=callback;};
 
     void set_parse_log_callback(ParseLogCallback callback){parse_log_callback_=callback;};    
@@ -251,9 +277,11 @@ private:
     CfgPrtCallback cfg_prt_callback_;
     CfgNav5Callback cfg_nav5_callback_;
 
+    NavPosECEFCallback nav_pos_ecef_callback_;
     NavPosLLHCallback nav_pos_llh_callback_;
     NavSolCallback nav_sol_callback_;
     NavStatusCallback nav_status_callback_;
+    NavVelECEFCallback nav_vel_ecef_callback_;
     NavVelNEDCallback nav_vel_ned_callback_;
     NavSVInfoCallback nav_sv_info_callback_;
     NavTimeGPSCallback nav_time_gps_callback_;
@@ -264,6 +292,8 @@ private:
     NavDGPSCallback nav_dgps_callback_;
     NavClockCallback nav_clock_callback_;
 
+    RxmRawXCallback rxm_rawx_callback_;
+    RxmSfrbXCallback rxm_sfrbx_callback_;
     RxmSvsiCallback rxm_svsi_callback_;
     
     ParseLogCallback parse_log_callback_;
@@ -272,12 +302,15 @@ private:
     //////////////////////////////////////////////////////
     // Incoming data buffers
     //////////////////////////////////////////////////////
-    unsigned char data_buffer_[MAX_NOUT_SIZE];  //!< data currently being buffered to read
+    #define DATA_BUF_SIZE (MAX_NOUT_SIZE * 100)
+    unsigned char data_buffer_[DATA_BUF_SIZE];  //!< data currently being buffered to read
     // unsigned char* data_read_;       //!< used only in BufferIncomingData - declared here for speed
 
     bool is_connected_; //!< indicates if a connection to the receiver has been established
     size_t bytes_remaining_;    //!< bytes remaining to be read in the current message
     size_t buffer_index_;       //!< index into data_buffer_
+
+    std::ofstream raw_log;
 };
 }
 

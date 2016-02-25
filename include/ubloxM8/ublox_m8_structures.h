@@ -9,7 +9,7 @@ namespace ublox_m8 {
 #define MAX_NOUT_SIZE      (5000)   // Maximum size of a uBlox log buffer (ALMANAC logs are big!)
 #define MAXCHAN		50  // Maximum number of signal channels
 #define MAX_GPS_SATS 32
-#define MAX_SAT 100        // Maximum number of SVs for all GNSS constellations
+#define MAX_SAT 256        // Maximum number of SVs for all GNSS constellations
 #define MAX_NUM_SOURCES 5
 #define MAX_NUM_OSCILATORS 5
 
@@ -1951,6 +1951,16 @@ PACK(
         uint8_t checksum[2];    
 });
 
+PACK(
+    struct NavSatRepeatedBlock{
+        uint8_t gnssId;    // GNSS identifier (see Satellite numbering) for assignment
+        uint8_t svId;      // Satellite identifier (see Satellite numbering) for assignment
+        uint8_t cno;       // Carrier to noise ratio (signal strength)
+        int8_t elev;       // Elevation (range: +/-90), unknown if out of range
+        int16_t azim;      // Azimuth (range +/-180), unknown if elevation is out of range
+        int16_t prRes;     // Pseudo range residual
+        uint32_t flags;    // Bitmask (see graphic below)
+});
 
 /*!
 * NAV-SAT Message Structure
@@ -1965,13 +1975,7 @@ PACK(
         uint8_t version;       // Message version (1 for this version)
         uint8_t numSvs;        // Number of satellites
         uint8_t reserved1[2];     // Reserved
-        uint8_t gnssId;        // GNSS identifier (see Satellite numbering) for assignment
-        uint8_t svId;      // Satellite identifier (see Satellite numbering) for assignment
-        uint8_t cno;       // Carrier to noise ratio (signal strength)
-        int8_t elev;       // Elevation (range: +/-90), unknown if out of range
-        int16_t azim;      // Azimuth (range +/-180), unknown if elevation is out of range
-        int16_t prRes;     // Pseudo range residual
-        uint32_t flags;        // Bitmask (see graphic below)
+        NavSatRepeatedBlock sats[MAX_SAT];
         uint8_t checksum[2];    
 });
 
@@ -2049,7 +2053,7 @@ PACK(
 * ID: 0x01  0x30  Payload Length= (8+12*NumChannels bytes)
 */
 PACK(
-    struct SVInfoReapBlock{
+    struct SVInfoRepeatedBlock{
         uint8_t ch_num;     //!< Channel Number (255 if SV isn't assigned to channel)
         uint8_t svid;       // Satellite ID number
         uint8_t flags;      // bitfield (description of contents follows)
@@ -2067,7 +2071,7 @@ PACK(
         uint8_t numch;  //! number of channels following
         uint8_t global_flags;   // Chip and Hardware Generation
         uint16_t reserved2;
-        SVInfoReapBlock svinfo_reap[MAXCHAN]; // NOTE: TODO: True max needs to be confirmed
+        SVInfoRepeatedBlock svinfo_repeated[MAX_SAT]; // NOTE: TODO: True max needs to be confirmed
         uint8_t checksum[2];
 });
 // Description of flags bitfield
@@ -2169,6 +2173,16 @@ PACK(
 * Message Type: PERIODIC/POLLED
 * ID: 0x01  0x11  Payload Length=20 bytes
 */
+PACK(
+    struct NavVelECEF{
+        UbloxHeader header;     //!< Ublox header
+        uint32_t iTOW;
+        int32_t ecefVX; //!< [cm/s]
+        int32_t ecefVY; //!< [cm/s]
+        int32_t ecefVZ; //!< [cm/s]
+        uint32_t sAcc; //!< Speed accuracy estimate [cm/s]
+        uint8_t checksum[2];
+});
 
 
 /*!
@@ -2240,6 +2254,7 @@ PACK(
         uint8_t checksum[2];    
 });
 
+#define RXM_SFRBX_MAX_WORDS 16
 
 /*!
 * RXM-SFRBX Message Structure
@@ -2253,14 +2268,14 @@ PACK(
     struct RxmSfrbX{
         UbloxHeader header;
         uint8_t gnssId;        // GNSS identifier (see Satellite Numbering)
-        uint8_t svId;      // Satellite identifier (see Satellite Numbering)
+        uint8_t svId;          // Satellite identifier (see Satellite Numbering)
         uint8_t reserved1;     // Reserved
         uint8_t freqId;        // Only used for GLONASS: This is the frequency slot + 7 (range from 0 to 13)
         uint8_t numWords;      // The number of data words contained in this message (0..16)
         uint8_t reserved2;     // Reserved
         uint8_t version;       // Message version, (=1 for this version)
         uint8_t reserved3;     // Reserved
-        uint32_t dwrd;     // The data words
+        uint32_t dwrds[RXM_SFRBX_MAX_WORDS];     // The data words
         uint8_t checksum[2];    
 });
 

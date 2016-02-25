@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2016 Swift Navigation Inc.
+* Contact: Pasi Miettinen <pasi.miettinen@exafore.com>
+*
+* This source is subject to the license found in the file 'LICENSE'
+* which must be be distributed together with this source. All other
+* rights reserved.
+*
+* THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+* KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR
+* PURPOSE.
+*/
+
 #include "ubloxM8/ublox_m8.h"
 #include <iostream>
 
@@ -5,6 +19,8 @@ using namespace std;
 using namespace ublox_m8;
 
 #define PI 3.14159265
+#define LOG_PAYLOAD_LEN(log) ((((uint16_t) *(log+5)) << 8) +\
+                               ((uint16_t) *(log+4)))
 
 inline void printHex(char *data, int length) {
     for (int i = 0; i < length; ++i) {
@@ -178,142 +194,162 @@ UbloxM8::UbloxM8() {
 
 UbloxM8::~UbloxM8() {
     Disconnect();
+
+    if (raw_log.is_open())
+      raw_log.close();
 }
 
 bool UbloxM8::Connect(std::string port, int baudrate) {
-    //serial_port_ = new serial::Serial(port,baudrate,serial::Timeout::simpleTimeout(1000));
-    serial::Timeout my_timeout(100, 1000, 0, 1000, 0);
-    try {
-        serial_port_ = new serial::Serial(port, baudrate, my_timeout);
+  //serial_port_ = new serial::Serial(port,baudrate,serial::Timeout::simpleTimeout(1000));
+  serial::Timeout my_timeout(50, 200, 0, 200, 0);//(100, 1000, 0, 1000, 0);
+  try {
+    serial_port_ = new serial::Serial(port, baudrate, my_timeout);
 
-		if (!serial_port_->isOpen()) {
-			std::stringstream output;
-			output << "Serial port: " << port << " failed to open.";
-			log_error_(output.str());
-			delete serial_port_;
-			serial_port_ = NULL;
-			is_connected_ = false;
-			return false;
-		} else {
-			std::stringstream output;
-			output << "Serial port: " << port << " opened successfully.";
-			log_info_(output.str());
-		}
+    if (!serial_port_->isOpen()) {
+      std::stringstream output;
+      output << "Serial port: " << port << " failed to open.";
+      log_error_(output.str());
+      delete serial_port_;
+      serial_port_ = NULL;
+      is_connected_ = false;
+      return false;
+    } else {
+      std::stringstream output;
+      output << "Serial port: " << port << " opened successfully.";
+      log_info_(output.str());
+    }
 
         //! stop any incoming data and flush buffers
-		//std::cout << "Flushing port" << std::endl;
-		serial_port_->flush();
-		
-		//! stop any incoming nmea data
-		SetCfgPrtUsb(true,true,false,false);
+    //std::cout << "Flushing port" << std::endl;
+    serial_port_->flush();
+    
+    //! stop any incoming nmea data
+    SetCfgPrtUsb(true,true,false,false);
 
-		//! wait for data to stop cominig in
-		//boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
-	
-	//    // clear serial port buffers
-	//    serial_port_->flush();
+    //! wait for data to stop cominig in
+    //boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 
-		// look for GPS by sending ping and waiting for response
-		if (!Ping()) {
-			std::stringstream output;
-			output << "Ublox GPS not found on port: " << port << std::endl;
-			log_error_(output.str());
-			delete serial_port_;
-			serial_port_ = NULL;
-			is_connected_ = false;
-			return false;
-		}
+    //    // clear serial port buffers
+    //    serial_port_->flush();
 
+    // look for GPS by sending ping and waiting for response
+    if (!Ping()) {
+      std::stringstream output;
+      output << "Ublox GPS not found on port: " << port << std::endl;
+      log_error_(output.str());
+      delete serial_port_;
+      serial_port_ = NULL;
+      is_connected_ = false;
+      return false;
+    }
+  } catch (std::exception e) {
+         std::stringstream output;
+         output << "Failed to open port " << port << "  Err: " << e.what();
+         log_error_(output.str());
+         serial_port_ = NULL;
+         is_connected_ = false;
+         return false;
+     }
 
-    } catch (std::exception e) {
-           std::stringstream output;
-           output << "Failed to open port " << port << "  Err: " << e.what();
-           log_error_(output.str());
-           serial_port_ = NULL;
-           is_connected_ = false;
-           return false;
-       }
+  // start reading
+  StartReading();
+  is_connected_ = true;
+  return true;
+}
 
-    // start reading
-    StartReading();
-    is_connected_ = true;
-    return true;
+void UbloxM8::ReadFile(std::string name)
+{
+  uint8_t buf[MAX_NOUT_SIZE];
+  std::ifstream ifs(name, std::ios::binary);
 
+  while (ifs.good()) {
+    ifs.read((char *)buf, sizeof(buf));
+    while (ifs.gcount() >\
+      std::streamsize(DATA_BUF_SIZE - buffer_index_)) {
+      boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+    }
+    ReadFromFile(buf, ifs.gcount());
+  }
+  ifs.close();
+}
+
+void UbloxM8::ReadFromFile(unsigned char* buffer, unsigned int length)
+{
+  BufferIncomingData(buffer, length);
 }
 
 bool UbloxM8::Ping(int num_attempts) {
-    try {
-        while ((num_attempts--) > 0) {
-            log_info_("Searching for Ublox receiver...");
-            // request version information
+  try {
+    while ((num_attempts--) > 0) {
+      log_info_("Searching for Ublox receiver...");
+      // request version information
 
-            // ask for version
-            PollMessage(MSG_CLASS_MON, MSG_ID_MON_VER);
+      // ask for version
+      PollMessage(MSG_CLASS_MON, MSG_ID_MON_VER);
 
-            boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
+      boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
 
-            unsigned char result[5000];
-            size_t bytes_read;
-            bytes_read = serial_port_->read(result, 5000);
+      unsigned char result[5000];
+      size_t bytes_read;
+      bytes_read = serial_port_->read(result, 5000);
 
-            //std::cout << "bytes read: " << (int)bytes_read << std::endl;
-            //std::cout << dec << result << std::endl;
+      //std::cout << "bytes read: " << (int)bytes_read << std::endl;
+      //std::cout << dec << result << std::endl;
 
-            if (bytes_read < 8) {
-                stringstream output;
-                output << "Only read " << bytes_read
-                        << " bytes in response to ping.";
-                log_debug_(output.str());
-                continue;
-            }
+      if (bytes_read < 8) {
+        stringstream output;
+        output << "Only read " << bytes_read
+                << " bytes in response to ping.";
+        log_debug_(output.str());
+        continue;
+      }
 
-            uint16_t length;
-            // search through result for version message
-            for (int ii = 0; ii < (bytes_read - 8); ii++) {
-                //std::cout << hex << (unsigned int)result[ii] << std::endl;
-                if (result[ii] == UBX_SYNC_BYTE_1) {
-                    if (result[ii + 1] != UBX_SYNC_BYTE_2)
-                        continue;
-                    if (result[ii + 2] != MSG_CLASS_MON)
-                        continue;
-                    if (result[ii + 3] != MSG_ID_MON_VER)
-                        continue;
-                    //std::cout << "length1:" << hex << (unsigned int)result[ii+4] << std::endl;
-                    //std::cout << "length2:" << hex << (unsigned int)result[ii+5] << std::endl;
-                    length = (result[ii + 4]) + (result[ii + 5] << 8);
-                    if (length < 40) {
-                        log_debug_("Incomplete version message received");
-                        //    //return false;
-                        continue;
-                    }
+      uint16_t length;
+      // search through result for version message
+      for (uint32_t ii = 0; ii < (bytes_read - 8); ii++) {
+        //std::cout << hex << (unsigned int)result[ii] << std::endl;
+        if (result[ii] == UBX_SYNC_BYTE_1) {
+          if (result[ii + 1] != UBX_SYNC_BYTE_2)
+            continue;
+          if (result[ii + 2] != MSG_CLASS_MON)
+            continue;
+          if (result[ii + 3] != MSG_ID_MON_VER)
+            continue;
+          //std::cout << "length1:" << hex << (unsigned int)result[ii+4] << std::endl;
+          //std::cout << "length2:" << hex << (unsigned int)result[ii+5] << std::endl;
+          length = (result[ii + 4]) + (result[ii + 5] << 8);
+          if (length < 40) {
+            log_debug_("Incomplete version message received");
+            //    //return false;
+            continue;
+          }
 
-                    string sw_version;
-                    string hw_version;
-                    string rom_version;
-                    sw_version.append((char*) (result + 6));
-                    hw_version.append((char*) (result + 36));
-                    //rom_version.append((char*)(result+46));
-                    log_info_("Ublox receiver found.");
-                    log_info_("Software Version: " + sw_version);
-                    log_info_("Hardware Version: " + hw_version);
-                    //log_info_("ROM Version: " + rom_version);
-                    return true;
-                }
-            }
-            stringstream output;
-            output << "Read " << bytes_read
-                    << " bytes, but version message not found.";
-            log_debug_(output.str());
-
+          string sw_version;
+          string hw_version;
+          string rom_version;
+          sw_version.append((char*) (result + 6));
+          hw_version.append((char*) (result + 36));
+          //rom_version.append((char*)(result+46));
+          log_info_("Ublox receiver found.");
+          log_info_("Software Version: " + sw_version);
+          log_info_("Hardware Version: " + hw_version);
+          //log_info_("ROM Version: " + rom_version);
+          return true;
         }
-    } catch (exception &e) {
-        std::stringstream output;
-        output << "Error pinging receiver: " << e.what();
-        log_error_(output.str());
-        return false;
+      }
+      stringstream output;
+      output << "Read " << bytes_read
+             << " bytes, but version message not found.";
+      log_debug_(output.str());
     }
+  } catch (exception &e) {
+      std::stringstream output;
+      output << "Error pinging receiver: " << e.what();
+      log_error_(output.str());
+      return false;
+  }
 
-    return false;
+  return false;
 }
 
 void UbloxM8::Disconnect() {
@@ -361,18 +397,38 @@ void UbloxM8::ReadSerialPort() {
         // read data
         try {
             len = serial_port_->read(buffer, MAX_NOUT_SIZE);
+
+            if (raw_log.is_open())
+              raw_log.write((char *)buffer, len);
+
+            // timestamp the read
+            if (time_handler_) 
+              read_timestamp_ = time_handler_();
+            else 
+              read_timestamp_ = 0;
+            // add data to the buffer to be parsed
+            BufferIncomingData(buffer, len);
         } catch (exception &e) {
-            stringstream output;
-            output << "Error reading serial port: " << e.what();
-            log_info_(output.str());
+            //stringstream output;
+            //output << "Error reading serial port: " << e.what();
+            //log_info_(output.str());
             Disconnect();
             return;
         }
-        // timestamp the read
-        read_timestamp_ = time_handler_();
-        // add data to the buffer to be parsed
-        BufferIncomingData(buffer, len);
     }
+}
+
+bool UbloxM8::CreateRawLog(std::string &name) {
+  try {
+    if (raw_log.is_open())
+      raw_log.close();
+  } catch (exception &e) {
+    return false;
+  }
+
+  raw_log.open(name, std::ios::binary);
+  
+  return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -674,28 +730,30 @@ bool UbloxM8::SetCfgNav5(uint8_t dynamic_model, uint8_t fix_mode){
 
 // (CFG-MSG) Set message output rate for specified message
 bool UbloxM8::SetCfgMsgRate(uint8_t class_id, uint8_t msg_id, uint8_t rate) {
-	try {
-        ublox_m8::CfgMsg message;
-		message.header.sync1 = UBX_SYNC_BYTE_1;
-		message.header.sync2 = UBX_SYNC_BYTE_2;
-		message.header.message_class = MSG_CLASS_CFG;
-		message.header.message_id = MSG_ID_CFG_MSG;
-		message.header.payload_length = 3;
+  try {
+    ublox_m8::CfgMsg message;
+    message.header.sync1 = UBX_SYNC_BYTE_1;
+    message.header.sync2 = UBX_SYNC_BYTE_2;
+    message.header.message_class = MSG_CLASS_CFG;
+    message.header.message_id = MSG_ID_CFG_MSG;
+    message.header.payload_length = 3;
 
-		message.message_class = class_id;
-		message.message_id = msg_id;
-		message.rate = rate;
+    message.message_class = class_id;
+    message.message_id = msg_id;
+    message.rate = rate;
 
-		unsigned char* msg_ptr = (unsigned char*) &message;
-		calculateCheckSum(msg_ptr + 2, 7, message.checksum);
+    unsigned char* msg_ptr = (unsigned char*) &message;
+    calculateCheckSum(msg_ptr + 2, 7, message.checksum);
 
-		return serial_port_->write(msg_ptr, sizeof(message)) == sizeof(message);
-	} catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error configuring ublox message rate: " << e.what();
-		log_error_(output.str());
-		return false;
-	}
+    /* make sure that cfg messages are not sent too fast */
+    boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+    return serial_port_->write(msg_ptr, sizeof(message)) == sizeof(message);
+  } catch (std::exception &e) {
+    std::stringstream output;
+    output << "Error configuring ublox message rate: " << e.what();
+    log_error_(output.str());
+    return false;
+  }
 }
 
 // Set Port Configuration
@@ -759,321 +817,381 @@ void UbloxM8::SetCfgPrtUsb(bool ubx_input, bool ubx_output,
 //
 //////////////////////////////////////////////////////////////
 void UbloxM8::BufferIncomingData(uint8_t *msg, size_t length) {
-    //MOOSTrace("Inside BufferIncomingData\n");
-    //cout << length << endl;
-    //cout << 0 << ": " << dec << (int)msg[0] << endl;
-    // add incoming data to buffer
+  //MOOSTrace("Inside BufferIncomingData\n");
+  //cout << length << endl;
+  //cout << 0 << ": " << dec << (int)msg[0] << endl;
+  // add incoming data to buffer
 
-    //printHex(reinterpret_cast<char*>(msg),length);
-	try {
+  //printHex(reinterpret_cast<char*>(msg),length);
+  try {
         unsigned short msgID = 0;
         
-		for (unsigned int i = 0; i < length; i++) {
-			//cout << i << ": " << hex << (int)msg[i] << dec << endl;
-			// make sure buffer_index_ is not larger than buffer
-			if (buffer_index_ >= MAX_NOUT_SIZE) {
-				buffer_index_ = 0;
-				log_warning_(
-						"Overflowed receiver buffer. See ublox.cpp BufferIncomingData");
+    for (unsigned int i = 0; i < length; i++) {
+      //cout << i << ": " << hex << (int)msg[i] << dec << endl;
+      // make sure buffer_index_ is not larger than buffer
+      if (buffer_index_ >= DATA_BUF_SIZE) {
+        buffer_index_ = 0;
+        log_warning_(
+            "Overflowed receiver buffer. See ublox.cpp BufferIncomingData");
 
-			}
-			//cout << "buffer_index_ = " << buffer_index_ << endl;
+      }
+      //cout << "buffer_index_ = " << buffer_index_ << endl;
 
-			if (buffer_index_ == 0) {	// looking for beginning of message
-				if (msg[i] == UBX_SYNC_BYTE_1) {	// beginning of msg found - add to buffer
-										//cout << "got first bit" << endl;
-					data_buffer_[buffer_index_++] = msg[i];
-					bytes_remaining_ = 0;
-				}	// end if (msg[i]
-			} // end if (buffer_index_==0)
-			else if (buffer_index_ == 1) {	// verify 2nd character of header
-				if (msg[i] == UBX_SYNC_BYTE_2) {	// 2nd byte ok - add to buffer
-										//cout << " got second synch bit" << endl;
-					data_buffer_[buffer_index_++] = msg[i];
-				} else {
-					// start looking for new message again
-					buffer_index_ = 0;
-					bytes_remaining_ = 0;
-					//readingACK=false;
-				} // end if (msg[i]==UBX_SYNC_BYTE_2)
-			}	// end else if (buffer_index_==1)
-			else if (buffer_index_ == 2) {	//look for ack
+      if (buffer_index_ == 0) {	// looking for beginning of message
+        if (msg[i] == UBX_SYNC_BYTE_1) {	// beginning of msg found - add to buffer
+                    //cout << "got first bit" << endl;
+          data_buffer_[buffer_index_++] = msg[i];
+          bytes_remaining_ = 0;
+        }	// end if (msg[i]
+      } // end if (buffer_index_==0)
+      else if (buffer_index_ == 1) {	// verify 2nd character of header
+        if (msg[i] == UBX_SYNC_BYTE_2) {	// 2nd byte ok - add to buffer
+                    //cout << " got second synch bit" << endl;
+          data_buffer_[buffer_index_++] = msg[i];
+        } else {
+          // start looking for new message again
+          buffer_index_ = 0;
+          bytes_remaining_ = 0;
+          //readingACK=false;
+        } // end if (msg[i]==UBX_SYNC_BYTE_2)
+      }	// end else if (buffer_index_==1)
+      else if (buffer_index_ == 2) {	//look for ack
 
-				if (msg[i] == MSG_CLASS_ACK)   // ACK or NAK message class
-						{
-					// Get message id from payload
-					char* class_id = reinterpret_cast<char*>(msg[i + 4]);
-					char* msg_id = reinterpret_cast<char*>(msg[i + 5]);
+        if (msg[i] == MSG_CLASS_ACK) {   // ACK or NAK message class
+          // Add function which takes class_id and msg_id and returns name of corresponding message
 
-					// Add function which takes class_id and msg_id and returns name of corresponding message
+          if (msg[i + 1] == MSG_ID_ACK_ACK) {  // ACK Message
+            std::cout << "Receiver Acknowledged Message " << std::endl;
+            printf("0x%.2X ", msg[i + 4]);
+            std::cout << " ";
+            printf("0x%.2X ", msg[i + 5]);
+            std::cout << endl;
 
-					if (msg[i + 1] == MSG_ID_ACK_ACK) // ACK Message
-							{
-						//std::cout << "Receiver Acknowledged Message " << std::endl;
-						//printf("0x%.2X ", (unsigned)class_id);
-						//std::cout << " ";
-						//printf("0x%.2X ", (unsigned)msg_id);
-						//std::cout << endl;
+          } else if (msg[i + 1] == MSG_ID_ACK_NAK) {   // NAK Message
+            std::cout << "Receiver Did Not Acknowledged Message " << std::endl;
+            printf("0x%.2X ", msg[i + 4]);
+            std::cout << " ";
+            printf("0x%.2X ", msg[i + 5]);
+            std::cout << endl;
+          }
 
-					}
+          buffer_index_ = 0;
+          bytes_remaining_ = 0;
+          //readingACK = false;			//? Why is readingACK = false in if & else statement? - CC
+        } else {
+          data_buffer_[buffer_index_++] = msg[i];
+          //readingACK = false;
+        }
+      } else if (buffer_index_ == 3) {
+        // msg[i] and msg[i-1] define message ID
+        data_buffer_[buffer_index_++] = msg[i];
+        // length of header is in byte 4
 
-					else if (msg[i + 1] == MSG_ID_ACK_NAK)    // NAK Message
-							{
-						//std::cout << "Receiver Did Not Acknowledged Message " << std::endl;
-						//printf("0x%.2X ", (unsigned)class_id);
-						//std::cout << " ";
-						//printf("0x%.2X ", (unsigned)msg_id);
-						//std::cout << endl;
-					}
+        //printHex(reinterpret_cast < char * > (data_buffer_),4);
 
-					buffer_index_ = 0;
-					bytes_remaining_ = 0;
-					//readingACK = false;			//? Why is readingACK = false in if & else statement? - CC
-				} else {
-					data_buffer_[buffer_index_++] = msg[i];
-					//readingACK = false;
-				}
-			} else if (buffer_index_ == 3) {
-				// msg[i] and msg[i-1] define message ID
-				data_buffer_[buffer_index_++] = msg[i];
-				// length of header is in byte 4
+        msgID = ((data_buffer_[buffer_index_ - 2]) << 8)
+            + data_buffer_[buffer_index_ - 1];
+        //cout << "msgID = " << msgID << endl;
+      } else if (buffer_index_ == 5) {
+        // add byte to buffer
+        data_buffer_[buffer_index_++] = msg[i];
+        // length of message (payload + 2 byte check sum )
+        bytes_remaining_ = ((data_buffer_[buffer_index_ - 1]) << 8)
+            + data_buffer_[buffer_index_ - 2] + 2;
 
-				//printHex(reinterpret_cast < char * > (data_buffer_),4);
+        //cout << "bytes_remaining_ = " << bytes_remaining_ << endl;
 
-				msgID = ((data_buffer_[buffer_index_ - 2]) << 8)
-						+ data_buffer_[buffer_index_ - 1];
-				//cout << "msgID = " << msgID << endl;
-			} else if (buffer_index_ == 5) {
-				// add byte to buffer
-				data_buffer_[buffer_index_++] = msg[i];
-				// length of message (payload + 2 byte check sum )
-				bytes_remaining_ = ((data_buffer_[buffer_index_ - 1]) << 8)
-						+ data_buffer_[buffer_index_ - 2] + 2;
-
-				//cout << "bytes_remaining_ = " << bytes_remaining_ << endl;
-
-				///cout << msgID << endl;
-			} else if (buffer_index_ == 6) {	// set number of bytes
-				data_buffer_[buffer_index_++] = msg[i];
-				bytes_remaining_--;
-			} else if (bytes_remaining_ == 1) {	// add last byte and parse
-				data_buffer_[buffer_index_++] = msg[i];
-				//std::cout << hex << (int)msg[i] << dec << std::endl;
-				//cout << " msgID = " << msgID << std::endl;
-				ParseLog(data_buffer_, msgID);
-				// reset counters
-				buffer_index_ = 0;
-				bytes_remaining_ = 0;
-				//cout << "Message Done." << std::endl;
-			}  // end else if (bytes_remaining_==1)
-			else {	// add data to buffer
-				data_buffer_[buffer_index_++] = msg[i];
-				bytes_remaining_--;
-			}
-		}	// end for
-	} catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error buffering incoming ublox data: " << e.what();
-		log_error_(output.str());
-	}
+        ///cout << msgID << endl;
+      } else if (buffer_index_ == 6) {	// set number of bytes
+        data_buffer_[buffer_index_++] = msg[i];
+        bytes_remaining_--;
+      } else if (bytes_remaining_ == 1) {	// add last byte and parse
+        data_buffer_[buffer_index_++] = msg[i];
+        //std::cout << hex << (int)msg[i] << dec << std::endl;
+        //cout << " msgID = " << msgID << std::endl;
+        ParseLog(data_buffer_, msgID);
+        // reset counters
+        buffer_index_ = 0;
+        bytes_remaining_ = 0;
+        //cout << "Message Done." << std::endl;
+      }  // end else if (bytes_remaining_==1)
+      else {	// add data to buffer
+        data_buffer_[buffer_index_++] = msg[i];
+        bytes_remaining_--;
+      }
+    }	// end for
+  } catch (std::exception &e) {
+    std::stringstream output;
+    output << "Error buffering incoming ublox data: " << e.what();
+    log_error_(output.str());
+  }
 }
 
 void UbloxM8::ParseLog(uint8_t *log, size_t logID) {
-	try {
-		uint16_t payload_length;
-		uint8_t num_of_svs;
-		uint8_t num_of_channels;
+  try {
+    uint16_t payload_length;
+    uint8_t num_of_svs;
+    uint8_t num_of_channels;
         
 
-		switch (logID) {
+    switch (logID) {
 
-		case CFG_PRT:
+    case CFG_PRT:
             ublox_m8::CfgPrt cur_port_settings;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			memcpy(&cur_port_settings, log, payload_length+HDR_CHKSM_LENGTH);
-			//printHex((char*) &cur_port_settings, sizeof(cur_port_settings));
-			if (cfg_prt_callback_)
-				cfg_prt_callback_(cur_port_settings, read_timestamp_);
-			break;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      memcpy(&cur_port_settings, log, payload_length+HDR_CHKSM_LENGTH);
+      //printHex((char*) &cur_port_settings, sizeof(cur_port_settings));
+      if (cfg_prt_callback_)
+        cfg_prt_callback_(cur_port_settings, read_timestamp_);
+      break;
 
-		case CFG_NAV5:
+    case CFG_NAV5:
             ublox_m8::CfgNav5 cur_nav5_settings;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			memcpy(&cur_nav5_settings, log, payload_length+HDR_CHKSM_LENGTH);
-			//printHex((char*) &cur_port_settings, sizeof(cur_port_settings));
-			if (cfg_nav5_callback_)
-				cfg_nav5_callback_(cur_nav5_settings, read_timestamp_);
-			break;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      memcpy(&cur_nav5_settings, log, payload_length+HDR_CHKSM_LENGTH);
+      //printHex((char*) &cur_port_settings, sizeof(cur_port_settings));
+      if (cfg_nav5_callback_)
+        cfg_nav5_callback_(cur_nav5_settings, read_timestamp_);
+      break;
 
-		case NAV_STATUS:
+    case NAV_STATUS:
             ublox_m8::NavStatus cur_nav_status;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			memcpy(&cur_nav_status, log, payload_length+HDR_CHKSM_LENGTH);
-			if (nav_status_callback_)
-				nav_status_callback_(cur_nav_status, read_timestamp_);
-			break;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      memcpy(&cur_nav_status, log, payload_length+HDR_CHKSM_LENGTH);
+      if (nav_status_callback_)
+        nav_status_callback_(cur_nav_status, read_timestamp_);
+      break;
 
-		case NAV_SOL:
+    case NAV_SOL:
             ublox_m8::NavSol cur_nav_sol;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			memcpy(&cur_nav_sol, log, payload_length+HDR_CHKSM_LENGTH);
-			if (nav_sol_callback_)
-				nav_sol_callback_(cur_nav_sol, read_timestamp_);
-			break;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      memcpy(&cur_nav_sol, log, payload_length+HDR_CHKSM_LENGTH);
+      if (nav_sol_callback_)
+        nav_sol_callback_(cur_nav_sol, read_timestamp_);
+      break;
 
-		case NAV_VELNED:
-            ublox_m8::NavVelNED cur_nav_vel_ned;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			memcpy(&cur_nav_vel_ned, log, payload_length+HDR_CHKSM_LENGTH);
-			if (nav_vel_ned_callback_)
-				nav_vel_ned_callback_(cur_nav_vel_ned, read_timestamp_);
-			break;
+    case NAV_VELNED:
+      ublox_m8::NavVelNED cur_nav_vel_ned;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      memcpy(&cur_nav_vel_ned, log, payload_length+HDR_CHKSM_LENGTH);
+      if (nav_vel_ned_callback_)
+        nav_vel_ned_callback_(cur_nav_vel_ned, read_timestamp_);
+      break;
 
-		case NAV_POSLLH:
-            ublox_m8::NavPosLLH cur_nav_position;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			memcpy(&cur_nav_position, log, payload_length+HDR_CHKSM_LENGTH);
-			if (nav_pos_llh_callback_)
-				nav_pos_llh_callback_(cur_nav_position, read_timestamp_);
-			break;
+    case NAV_VELECEF:
+    {
+      ublox_m8::NavVelECEF velecef;
+      memcpy(&velecef, log, LOG_PAYLOAD_LEN(log) + HDR_CHKSM_LENGTH);
+      if (nav_vel_ecef_callback_)
+        nav_vel_ecef_callback_(velecef, read_timestamp_);
+      break;
+    }
 
-		case NAV_SVINFO:
-            ublox_m8::NavSVInfo cur_nav_svinfo;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			num_of_channels = (uint8_t) *(log+10);
+    case NAV_POSECEF:
+    {
+      ublox_m8::NavPosECEF pos;
+      memcpy(&pos, log, LOG_PAYLOAD_LEN(log) + HDR_CHKSM_LENGTH);
+      if (nav_pos_ecef_callback_)
+        nav_pos_ecef_callback_(pos, read_timestamp_);
+      break;
+    }
 
-			//std::cout << "NAV-SVINFO..." << std::endl;
-			// print whole message
-			//printHex((char*) log, payload_length+8);
+    case NAV_POSLLH:
+      ublox_m8::NavPosLLH cur_nav_position;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      memcpy(&cur_nav_position, log, payload_length+HDR_CHKSM_LENGTH);
+      if (nav_pos_llh_callback_)
+        nav_pos_llh_callback_(cur_nav_position, read_timestamp_);
+      break;
 
-			// Copy portion of NAV-INFO before repeated block (8 + header length)
-			memcpy(&cur_nav_svinfo, log, 6+8);
-			// Copy repeated block
-			for(int index = 0; index < num_of_channels; index++) {
-				memcpy(&cur_nav_svinfo.svinfo_reap[index], log+14+(index*12), 12);
-			}
-			// Copy Checksum
-			memcpy(&cur_nav_svinfo.checksum, log+14+(num_of_channels*12), 2);
+    case NAV_SVINFO:
+      ublox_m8::NavSVInfo cur_nav_svinfo;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      num_of_channels = (uint8_t) *(log+10);
 
-			// Print populated structure
-			//printHex((char*) &cur_nav_svinfo, sizeof(cur_nav_svinfo));
-			//std::cout << std::endl;
+      //std::cout << "NAV-SVINFO..." << std::endl;
+      // print whole message
+      //printHex((char*) log, payload_length+8);
 
-			if (nav_sv_info_callback_)
-				nav_sv_info_callback_(cur_nav_svinfo, read_timestamp_);
-			break;
+      // Copy portion of NAV-INFO before repeated block (8 + header length)
+      memcpy(&cur_nav_svinfo, log, 6+8);
+      // Copy repeated block
+      for(int index = 0; index < num_of_channels; index++) {
+        memcpy(&cur_nav_svinfo.svinfo_repeated[index],
+          log+14+(index*12), 12);
+      }
+      // Copy Checksum
+      memcpy(&cur_nav_svinfo.checksum, log+14+(num_of_channels*12), 2);
 
-		case NAV_TIMEGPS:
+      // Print populated structure
+      //printHex((char*) &cur_nav_svinfo, sizeof(cur_nav_svinfo));
+      //std::cout << std::endl;
+
+      if (nav_sv_info_callback_)
+        nav_sv_info_callback_(cur_nav_svinfo, read_timestamp_);
+      break;
+
+    case NAV_TIMEGPS:
             ublox_m8::NavTimeGPS cur_nav_gps_time;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			memcpy(&cur_nav_gps_time, log, payload_length+HDR_CHKSM_LENGTH);
-			if (nav_time_gps_callback_)
-				nav_time_gps_callback_(cur_nav_gps_time, read_timestamp_);
-			break;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      memcpy(&cur_nav_gps_time, log, payload_length+HDR_CHKSM_LENGTH);
+      if (nav_time_gps_callback_)
+        nav_time_gps_callback_(cur_nav_gps_time, read_timestamp_);
+      break;
 
-		case NAV_UTCTIME:
+    case NAV_UTCTIME:
             ublox_m8::NavTimeUTC cur_nav_utc_time;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			memcpy(&cur_nav_utc_time, log, payload_length+HDR_CHKSM_LENGTH);
-			if (nav_time_utc_callback_)
-				nav_time_utc_callback_(cur_nav_utc_time, read_timestamp_);
-			break;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      memcpy(&cur_nav_utc_time, log, payload_length+HDR_CHKSM_LENGTH);
+      if (nav_time_utc_callback_)
+        nav_time_utc_callback_(cur_nav_utc_time, read_timestamp_);
+      break;
 
-		case NAV_DOP:
+    case NAV_DOP:
             ublox_m8::NavDOP cur_nav_dop;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			memcpy(&cur_nav_dop, log, payload_length+HDR_CHKSM_LENGTH);
-			if (nav_dop_callback_)
-				nav_dop_callback_(cur_nav_dop, read_timestamp_);
-			break;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      memcpy(&cur_nav_dop, log, payload_length+HDR_CHKSM_LENGTH);
+      if (nav_dop_callback_)
+        nav_dop_callback_(cur_nav_dop, read_timestamp_);
+      break;
 
-		case NAV_DGPS:
+    case NAV_DGPS:
             ublox_m8::NavDGPS cur_nav_dgps;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			memcpy(&cur_nav_dgps, log, payload_length+HDR_CHKSM_LENGTH);
-			if (nav_dgps_callback_)
-				nav_dgps_callback_(cur_nav_dgps, read_timestamp_);
-			break;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      memcpy(&cur_nav_dgps, log, payload_length+HDR_CHKSM_LENGTH);
+      if (nav_dgps_callback_)
+        nav_dgps_callback_(cur_nav_dgps, read_timestamp_);
+      break;
 
-		case NAV_CLOCK:
+    case NAV_CLOCK:
             ublox_m8::NavClock cur_nav_clock;
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			memcpy(&cur_nav_clock, log, payload_length+HDR_CHKSM_LENGTH);
-			if (nav_clock_callback_)
-				nav_clock_callback_(cur_nav_clock, read_timestamp_);
-			break;
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      memcpy(&cur_nav_clock, log, payload_length+HDR_CHKSM_LENGTH);
+      if (nav_clock_callback_)
+        nav_clock_callback_(cur_nav_clock, read_timestamp_);
+      break;
 
-        case RXM_SVSI:
-			// NOTE: needs to be checked!!
-            ublox_m8::RxmSvsi cur_sv_status;
+    case RXM_SVSI:
+      // NOTE: needs to be checked!!
+      ublox_m8::RxmSvsi cur_sv_status;
 
-			payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
-			num_of_svs = (uint8_t) *(log+13);
+      payload_length = (((uint16_t) *(log+5)) << 8) + ((uint16_t) *(log+4));
+      num_of_svs = (uint8_t) *(log+13);
 
-			/*
-			std::cout << "number of svs following: "<<(double) num_of_svs << endl;
-			std::cout << "payload length: "<<(double) payload_length << endl;
-			printHex((char*) &payload_length,2);
-			// print whole message
-			std::cout << "RXM-SVSI..." << std::endl;
-			printHex((char*) log, payload_length+8);
-			std::cout <<std::endl;
-			*/
+      /*
+      std::cout << "number of svs following: "<<(double) num_of_svs << endl;
+      std::cout << "payload length: "<<(double) payload_length << endl;
+      printHex((char*) &payload_length,2);
+      // print whole message
+      std::cout << "RXM-SVSI..." << std::endl;
+      printHex((char*) log, payload_length+8);
+      std::cout <<std::endl;
+      */
 
-			// Copy portion of RXM-SVSI before repeated block (8 + header length)
-			memcpy(&cur_sv_status, log, 6 + 8);
-			// Copy repeated block
-			for (uint8_t index = 0; index < num_of_svs; index++) {
-				memcpy(&cur_sv_status.repeated_block[index],log+14+(index*6),6);
-			}
-			// Copy Checksum
-			memcpy(&cur_sv_status.checksum, log+14+(6*num_of_svs), 2);
+      // Copy portion of RXM-SVSI before repeated block (8 + header length)
+      memcpy(&cur_sv_status, log, 6 + 8);
+      // Copy repeated block
+      for (uint16_t index = 0; index < num_of_svs; index++) {
+        memcpy(&cur_sv_status.repeated_block[index],log+14+(index*6),6);
+      }
+      // Copy Checksum
+      memcpy(&cur_sv_status.checksum, log+14+(6*num_of_svs), 2);
 
-			/*
-			// Print populated structure
-			printHex((char*) &cur_sv_status, sizeof(cur_sv_status));
-			std::cout << std::endl;
-			*/
+      /*
+      // Print populated structure
+      printHex((char*) &cur_sv_status, sizeof(cur_sv_status));
+      std::cout << std::endl;
+      */
 
-			if (rxm_svsi_callback_)
-				rxm_svsi_callback_(cur_sv_status, read_timestamp_);
-			break;
+      if (rxm_svsi_callback_)
+        rxm_svsi_callback_(cur_sv_status, read_timestamp_);
+      break;
 
-		} // end switch (logID)
+    case RXM_RAWX:
+    {
+      ublox_m8::RxmRawX rawx;
+      size_t unrep_block = sizeof(rawx) - sizeof(rawx.repeated_block) -\
+        sizeof(rawx.checksum);
 
-        /*
-         * For M8L CONFIDENTIAL INTERFACE
-         * If message isn't found in standard M8 protocol, it's passed to the M8L
-         * interface ParseLog.
-         */
-        if(parse_log_callback_)
-            parse_log_callback_(log, logID);
+      // Copy portion of RXM-RAWX before repeated block
+      memcpy(&rawx, log, unrep_block);
+      // Copy repeated block
+      for (uint16_t index = 0; index < rawx.numMeas; index++) {
+        memcpy(&rawx.repeated_block[index],
+          log+unrep_block+(index*sizeof(RxmRawXRepeated)),
+          sizeof(RxmRawXRepeated));
+      }
+      // Copy Checksum
+      memcpy(&rawx.checksum,
+        log+unrep_block+(sizeof(RxmRawXRepeated)*rawx.numMeas),
+        sizeof(rawx.checksum));
 
-	} catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error parsing ublox log: " << e.what();
-		log_error_(output.str());
-	}
+
+      if (rxm_rawx_callback_)
+        rxm_rawx_callback_(rawx, read_timestamp_);
+      break;
+    }
+
+    case RXM_SFRBX:
+    {
+      ublox_m8::RxmSfrbX sfrbx;
+      size_t unrep_block = sizeof(sfrbx) - sizeof(sfrbx.dwrds) -\
+        sizeof(sfrbx.checksum);
+
+      // Copy portion of RXM-RAWX before repeated block
+      memcpy(&sfrbx, log, unrep_block);
+      // Copy repeated block
+      for (uint16_t index = 0; index < sfrbx.numWords; index++) {
+        memcpy(&sfrbx.dwrds[index],
+          log+unrep_block+(index*sizeof(uint32_t)), sizeof(uint32_t));
+      }
+      // Copy Checksum
+      memcpy(&sfrbx.checksum,
+        log+unrep_block+(sizeof(uint32_t)*sfrbx.numWords),
+        sizeof(sfrbx.checksum));
+
+
+      if (rxm_sfrbx_callback_)
+        rxm_sfrbx_callback_(sfrbx, read_timestamp_);
+      break;
+    }
+
+    default:
+      break;
+    } // end switch (logID)
+
+    /*
+     * For M8L CONFIDENTIAL INTERFACE
+     * If message isn't found in standard M8 protocol, it's passed to the M8L
+     * interface ParseLog.
+     */
+    if(parse_log_callback_)
+        parse_log_callback_(log, logID);
+
+  } catch (std::exception &e) {
+    std::stringstream output;
+    output << "Error parsing ublox log: " << e.what();
+    log_error_(output.str());
+  }
 } // end ParseLog()
 
 void UbloxM8::calculateCheckSum(uint8_t* in, size_t length, uint8_t* out) {
+  try {
+    uint8_t a = 0;
+    uint8_t b = 0;
 
-	try {
-		uint8_t a = 0;
-		uint8_t b = 0;
+    for (uint8_t i = 0; i < length; i++) {
 
-		for (uint8_t i = 0; i < length; i++) {
+      a = a + in[i];
+      b = b + a;
 
-			a = a + in[i];
-			b = b + a;
+    }
 
-		}
-
-		out[0] = (a & 0xFF);
-		out[1] = (b & 0xFF);
-	} catch (std::exception &e) {
-		std::stringstream output;
-		output << "Error calculating ublox checksum: " << e.what();
-		log_error_(output.str());
-	}
+    out[0] = (a & 0xFF);
+    out[1] = (b & 0xFF);
+  } catch (std::exception &e) {
+    std::stringstream output;
+    output << "Error calculating ublox checksum: " << e.what();
+    log_error_(output.str());
+  }
 }
